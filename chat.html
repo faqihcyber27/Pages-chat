@@ -2,13 +2,15 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
 body {background:#020617;color:white;}
+.header {background:linear-gradient(135deg,#7c3aed,#4f46e5);}
 .me {background:#7c3aed;}
-.them {background:rgba(255,255,255,0.1);}
+.them {background:rgba(255,255,255,0.08);}
 </style>
 </head>
 
@@ -17,38 +19,45 @@ body {background:#020617;color:white;}
 <div id="app" class="h-screen flex flex-col">
 
 <!-- HEADER -->
-<div class="p-4 bg-purple-600 flex items-center gap-3">
-<button onclick="history.back()">←</button>
-<p>{{chat.email}}</p>
+<div class="header p-4 flex items-center gap-3">
+  <button onclick="history.back()">←</button>
+  <div>
+    <p class="font-semibold">{{chat.email}}</p>
+    <p class="text-xs opacity-70">Online</p>
+  </div>
 </div>
 
-<!-- CHAT -->
+<!-- CHAT AREA -->
 <div ref="box" class="flex-1 overflow-auto p-3 space-y-2">
 
-<div v-for="m in messages"
-     :class="m.sender===user.email?'flex justify-end':'flex'">
+  <div v-for="m in messages"
+       :class="m.sender===user.email?'flex justify-end':'flex'">
 
-  <div :class="[
-    'px-3 py-2 rounded-xl max-w-[70%]',
-    m.sender===user.email?'me':'them'
-  ]">
-    {{m.text}}
+    <div :class="[
+      'px-4 py-2 rounded-2xl max-w-[70%]',
+      m.sender===user.email?'me':'them'
+    ]">
+
+      <p class="text-sm">{{m.text}}</p>
+
+    </div>
+
   </div>
 
 </div>
 
-</div>
-
 <!-- INPUT -->
-<div class="p-2 flex gap-2">
+<div class="p-3 flex gap-2 bg-black/30">
 
-<input v-model="text"
-class="flex-1 p-2 text-black rounded">
+  <input v-model="text"
+  @keyup.enter="send"
+  placeholder="Type message..."
+  class="flex-1 p-3 rounded-full text-black">
 
-<button @click="send"
-class="bg-purple-600 px-3 rounded">
-Send
-</button>
+  <button @click="send"
+  class="bg-purple-600 px-4 rounded-full">
+  ➤
+  </button>
 
 </div>
 
@@ -65,7 +74,8 @@ chat:{},
 messages:[],
 text:'',
 ws:null,
-room:''
+room:'',
+isConnected:false
 }
 },
 
@@ -79,7 +89,7 @@ if(!this.chat || !this.chat.email){
   return
 }
 
-// 🔥 FIX ROOM (WAJIB)
+// 🔥 ROOM FIX (WAJIB)
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
 console.log("ROOM:", this.room)
@@ -90,13 +100,14 @@ this.messages = await res.json()
 
 this.scroll()
 
-// ===== CONNECT WS (FIX URL)
+// ===== CONNECT WS
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
 
 this.ws.onopen = () => {
   console.log("WS CONNECTED ✅")
+  this.isConnected = true
 }
 
 this.ws.onerror = (e) => {
@@ -105,7 +116,6 @@ this.ws.onerror = (e) => {
 
 this.ws.onmessage = (e) => {
   const msg = JSON.parse(e.data)
-
   this.messages.push(msg)
   this.scroll()
 }
@@ -114,7 +124,12 @@ this.ws.onmessage = (e) => {
 
 methods:{
 send(){
-if(!this.text || !this.ws) return
+
+// ❌ JANGAN KIRIM KALAU BELUM CONNECT
+if(!this.text || !this.isConnected){
+  console.log("WS belum connect")
+  return
+}
 
 this.ws.send(JSON.stringify({
 room:this.room,

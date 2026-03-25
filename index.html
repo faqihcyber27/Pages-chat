@@ -1,59 +1,124 @@
-<!-- SIMPAN sebagai index.html -->
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Login</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3"></script>
+
+<title>Auth</title>
+
+<style>
+body{
+  background:#0b0f14;
+}
+.glow{
+  box-shadow:0 0 20px rgba(59,130,246,0.3);
+}
+</style>
+
 </head>
 
-<body class="bg-black flex items-center justify-center h-screen">
+<body class="h-screen flex items-center justify-center text-white">
 
-<div id="app" class="bg-white/10 p-6 rounded-xl text-white w-80">
+<div id="app" class="w-full max-w-sm px-4">
 
-<h2 class="text-center mb-4">{{ isLogin ? 'Login' : 'Register' }}</h2>
+<!-- CARD -->
+<div class="bg-gray-900 rounded-2xl p-6 glow">
 
-<input v-if="!isLogin" v-model="name" placeholder="Nama" class="w-full mb-2 p-2 rounded">
-<input v-model="email" placeholder="Email" class="w-full mb-2 p-2 rounded">
-<input type="password" v-model="password" placeholder="Password" class="w-full mb-2 p-2 rounded">
+  <!-- TITLE -->
+  <div class="text-center mb-6">
+    <h1 class="text-xl font-bold">
+      {{ isLogin ? 'Welcome Back' : 'Create Account' }}
+    </h1>
+    <p class="text-gray-400 text-sm">
+      {{ isLogin ? 'Login to your account' : 'Register new account' }}
+    </p>
+  </div>
 
-<button @click="submit" class="bg-green-500 w-full p-2 rounded">
-{{ isLogin ? 'Login' : 'Register' }}
-</button>
+  <!-- FORM -->
+  <div class="space-y-4">
 
-<p class="text-center mt-3">
-<a href="#" @click="isLogin=!isLogin">
-{{ isLogin ? 'Register' : 'Login' }}
-</a>
-</p>
+    <!-- EMAIL -->
+    <input v-model="email"
+      type="text"
+      placeholder="Email"
+      class="w-full bg-gray-800 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+
+    <!-- PASSWORD -->
+    <input v-model="password"
+      type="password"
+      placeholder="Password"
+      class="w-full bg-gray-800 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+
+    <!-- CONFIRM -->
+    <input v-if="!isLogin"
+      v-model="confirm"
+      type="password"
+      placeholder="Confirm Password"
+      class="w-full bg-gray-800 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+
+    <!-- BUTTON -->
+    <button @click="submit"
+      class="w-full bg-blue-500 hover:bg-blue-600 transition p-3 rounded-lg font-semibold">
+      {{ isLogin ? 'Login' : 'Register' }}
+    </button>
+
+  </div>
+
+  <!-- TOGGLE -->
+  <div class="text-center mt-4 text-sm text-gray-400">
+    <span v-if="isLogin">
+      Belum punya akun?
+      <button @click="toggle" class="text-blue-400">Register</button>
+    </span>
+    <span v-else>
+      Sudah punya akun?
+      <button @click="toggle" class="text-blue-400">Login</button>
+    </span>
+  </div>
+
+</div>
 
 </div>
 
 <script>
-const API = "https://worker-chat.jihadwajib68.workers.dev"
+const { createApp } = Vue;
 
-Vue.createApp({
-  data() {
-    return { isLogin: true, name:'', email:'', password:'' }
-  },
-  methods:{
-    async submit(){
-      const res = await fetch(API + (this.isLogin?"/login":"/register"), {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify(this)
-      })
-      const data = await res.json()
+createApp({
+data(){
+return{
+isLogin:true,
+email:"",
+password:"",
+confirm:""
+}
+},
 
-      if(data.token){
-        localStorage.setItem("user", JSON.stringify(data.user))
-        location.href="chat.html"
-      } else alert(data.error)
-    }
-  }
-}).mount("#app")
+methods:{
+toggle(){
+this.isLogin=!this.isLogin;
+},
+
+submit(){
+if(!this.email || !this.password){
+alert("Isi semua field!");
+return;
+}
+
+if(!this.isLogin && this.password !== this.confirm){
+alert("Password tidak sama!");
+return;
+}
+
+// simulasi login
+alert(this.isLogin ? "Login sukses" : "Register sukses");
+
+// redirect (contoh)
+window.location.href = "/";
+}
+}
+}).mount("#app");
 </script>
 
 </body>

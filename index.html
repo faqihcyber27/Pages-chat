@@ -2,80 +2,89 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://unpkg.com/vue@3"></script>
-
-<title>Auth</title>
-
-<style>
-body{
-  background:#0b0f14;
-}
-.glow{
-  box-shadow:0 0 20px rgba(59,130,246,0.3);
-}
-</style>
-
 </head>
 
-<body class="h-screen flex items-center justify-center text-white">
+<body class="bg-black text-white">
 
-<div id="app" class="w-full max-w-sm px-4">
+<div id="app" class="h-screen">
 
-<!-- CARD -->
-<div class="bg-gray-900 rounded-2xl p-6 glow">
+<!-- ================= AUTH PAGE ================= -->
+<div v-if="!token" class="h-full flex items-center justify-center">
 
-  <!-- TITLE -->
-  <div class="text-center mb-6">
-    <h1 class="text-xl font-bold">
-      {{ isLogin ? 'Welcome Back' : 'Create Account' }}
-    </h1>
-    <p class="text-gray-400 text-sm">
-      {{ isLogin ? 'Login to your account' : 'Register new account' }}
-    </p>
-  </div>
+  <div class="bg-gray-900 p-6 rounded-xl w-full max-w-sm">
 
-  <!-- FORM -->
-  <div class="space-y-4">
+    <h2 class="text-center text-xl mb-4">
+      {{ isLogin ? 'Login' : 'Register' }}
+    </h2>
 
-    <!-- EMAIL -->
-    <input v-model="email"
-      type="text"
-      placeholder="Email"
-      class="w-full bg-gray-800 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+    <input v-model="email" placeholder="Email"
+      class="w-full p-3 mb-3 bg-gray-800 rounded">
 
-    <!-- PASSWORD -->
-    <input v-model="password"
-      type="password"
-      placeholder="Password"
-      class="w-full bg-gray-800 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+    <input v-model="password" type="password" placeholder="Password"
+      class="w-full p-3 mb-3 bg-gray-800 rounded">
 
-    <!-- CONFIRM -->
-    <input v-if="!isLogin"
-      v-model="confirm"
-      type="password"
-      placeholder="Confirm Password"
-      class="w-full bg-gray-800 p-3 rounded-lg outline-none focus:ring-2 focus:ring-blue-500">
+    <input v-if="!isLogin" v-model="name" placeholder="Name"
+      class="w-full p-3 mb-3 bg-gray-800 rounded">
 
-    <!-- BUTTON -->
     <button @click="submit"
-      class="w-full bg-blue-500 hover:bg-blue-600 transition p-3 rounded-lg font-semibold">
+      class="w-full bg-blue-500 p-3 rounded">
       {{ isLogin ? 'Login' : 'Register' }}
     </button>
 
+    <div class="text-center mt-3">
+      <button @click="isLogin=!isLogin" class="text-blue-400">
+        Switch
+      </button>
+    </div>
+
   </div>
 
-  <!-- TOGGLE -->
-  <div class="text-center mt-4 text-sm text-gray-400">
-    <span v-if="isLogin">
-      Belum punya akun?
-      <button @click="toggle" class="text-blue-400">Register</button>
-    </span>
-    <span v-else>
-      Sudah punya akun?
-      <button @click="toggle" class="text-blue-400">Login</button>
-    </span>
+</div>
+
+<!-- ================= CHAT PAGE ================= -->
+<div v-else class="h-full flex flex-col bg-gray-100 text-black">
+
+  <!-- HEADER -->
+  <div class="bg-blue-500 text-white p-3 flex justify-between">
+    <span>{{ user?.name }}</span>
+    <button @click="logout">Logout</button>
+  </div>
+
+  <!-- CHAT -->
+  <div ref="box" class="flex-1 overflow-auto p-2">
+
+    <div v-for="m in chat"
+      :class="m.me ? 'text-right' : ''">
+
+      <div class="inline-block bg-white p-2 m-1 rounded">
+        <b>{{ m.user }}</b><br>
+        {{ m.msg }}
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- TYPING -->
+  <div v-if="typing" class="text-xs px-2">
+    {{ typing }} mengetik...
+  </div>
+
+  <!-- INPUT -->
+  <div class="flex p-2 gap-2 bg-white">
+
+    <input v-model="msg"
+      @input="sendTyping"
+      @keydown.enter="send"
+      class="flex-1 border p-2 rounded">
+
+    <button @click="send"
+      class="bg-blue-500 text-white px-4 rounded">
+      Send
+    </button>
+
   </div>
 
 </div>
@@ -91,32 +100,123 @@ return{
 isLogin:true,
 email:"",
 password:"",
-confirm:""
+name:"",
+token:localStorage.getItem("token"),
+ws:null,
+msg:"",
+chat:[],
+user:null,
+typing:""
 }
+},
+
+async mounted(){
+
+if(this.token){
+  await this.loadUser();
+  this.connectWS();
+}
+
 },
 
 methods:{
-toggle(){
-this.isLogin=!this.isLogin;
+
+// ================= AUTH =================
+
+async submit(){
+
+const url = this.isLogin ? "/login" : "/register";
+
+const res = await fetch("https://chat-realtime.jihadwajib68.workers.dev"+url,{
+  method:"POST",
+  body:JSON.stringify({
+    email:this.email,
+    password:this.password,
+    name:this.name
+  })
+});
+
+if(this.isLogin){
+  const data = await res.json();
+
+  localStorage.setItem("token",data.token);
+  this.token = data.token;
+
+  await this.loadUser();
+  this.connectWS();
+
+}else{
+  alert("Register sukses");
+  this.isLogin=true;
+}
 },
 
-submit(){
-if(!this.email || !this.password){
-alert("Isi semua field!");
+logout(){
+localStorage.removeItem("token");
+location.reload();
+},
+
+async loadUser(){
+const res = await fetch(
+"https://chat-realtime.jihadwajib68.workers.dev/me",
+{headers:{Authorization:this.token}}
+);
+
+this.user = await res.json();
+},
+
+// ================= CHAT =================
+
+connectWS(){
+
+this.ws = new WebSocket(
+"wss://chat-realtime.jihadwajib68.workers.dev?token="+this.token
+);
+
+this.ws.onmessage=(e)=>{
+const d = JSON.parse(e.data);
+
+if(d.type==="typing"){
+this.typing = d.user;
+setTimeout(()=>this.typing="",1000);
 return;
 }
 
-if(!this.isLogin && this.password !== this.confirm){
-alert("Password tidak sama!");
-return;
+this.chat.push({...d,me:false});
+this.scroll();
+};
+
+},
+
+send(){
+if(!this.msg) return;
+
+const payload={
+type:"message",
+msg:this.msg
+};
+
+this.ws.send(JSON.stringify(payload));
+
+this.chat.push({
+...payload,
+user:this.user.name,
+me:true
+});
+
+this.msg="";
+},
+
+sendTyping(){
+this.ws.send(JSON.stringify({type:"typing"}));
+},
+
+scroll(){
+this.$nextTick(()=>{
+this.$refs.box.scrollTop=this.$refs.box.scrollHeight;
+});
 }
 
-// simulasi login
-alert(this.isLogin ? "Login sukses" : "Register sukses");
-
-// redirect (contoh)
-window.location.href = "/";
-}
 }
 }).mount("#app");
 </script>

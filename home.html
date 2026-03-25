@@ -70,13 +70,13 @@ body {background:#020617;color:white;}
           <p class="font-semibold flex items-center gap-2">
             {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
 
-            <span v-if="onlineUsers.includes(c.friend_email || (c.user1===user.email?c.user2:c.user1))"
+            <span v-if="onlineUsers.includes(getFriendEmail(c))"
               class="w-2 h-2 bg-green-400 rounded-full"></span>
 
             <span v-if="c.pinned" class="text-yellow-400 text-xs">📌</span>
           </p>
 
-          <!-- MESSAGE / TYPING -->
+          <!-- 🔥 FIX TYPING -->
           <p class="text-sm truncate max-w-[180px]"
              :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-50'">
 
@@ -246,7 +246,7 @@ this.ws.onopen = ()=>{
   }))
 }
 
-// 🔥 HEARTBEAT
+// heartbeat
 setInterval(()=>{
   if(this.ws && this.ws.readyState===1){
     this.ws.send(JSON.stringify({
@@ -265,12 +265,11 @@ this.ws.onmessage = (e)=>{
   }
 
   if(msg.type==="typing"){
-    // 🔥 FIX mapping ke friend
-    this.typingUsers[msg.sender] = msg.name || msg.sender
+    this.typingUsers[msg.sender]=msg.name || msg.sender
 
     setTimeout(()=>{
       delete this.typingUsers[msg.sender]
-    },1500)
+    },2000)
   }
 }
 

@@ -309,10 +309,29 @@ return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
 },
 
 openChat(c){
+
+const email = c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
+const room = [this.user.email, email].sort().join("_")
+
+// 🔥 TAMBAHAN: mark as read ke backend
+fetch(API+"/mark-read",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+  room:room,
+  user:this.user.email
+})
+})
+
+// 🔥 TAMBAHAN: hilangkan badge langsung (UX halus)
+c.unread = 0
+
+// (kode kamu tetap)
 localStorage.setItem("activeChat", JSON.stringify({
   email: c.friend_email,
   name: c.friend_name
 }))
+
 window.location.href="chat.html"
 },
 

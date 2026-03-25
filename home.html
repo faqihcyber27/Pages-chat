@@ -41,19 +41,14 @@ body {background:#020617;color:white;}
   <!-- ===== CHATS ===== -->
   <div v-if="tab==='chats'">
 
-    <div class="text-3xl mb-2">💬</div>
+    <div class="text-3xl mb-4">💬</div>
 
-    <!-- 🔥 SEARCH (TAMBAHAN) -->
-    <input v-model="search"
-      placeholder="Search chat..."
-      class="w-full p-2 mb-3 bg-white/10 rounded">
-
-    <div v-if="filteredChats.length===0" class="text-center mt-20 opacity-60">
+    <div v-if="chats.length===0" class="text-center mt-20 opacity-60">
       No chats yet
     </div>
 
     <!-- CHAT LIST -->
-    <div v-for="c in filteredChats"
+    <div v-for="c in chats"
          @click="openChat(c)"
          @touchstart="startChatPress(c)"
          @touchend="cancelPress"
@@ -62,19 +57,19 @@ body {background:#020617;color:white;}
       <!-- LEFT -->
       <div class="flex items-center gap-3">
 
-        <!-- 🔥 AVATAR FALLBACK -->
-        <div v-if="!c.avatar"
-             class="w-10 h-10 rounded-full bg-purple-600 flex items-center justify-center">
-          {{getInitial(c)}}
-        </div>
-
-        <img v-else :src="c.avatar"
+        <img src="https://i.pravatar.cc/40"
              class="w-10 h-10 rounded-full">
 
         <div>
-          <p class="font-semibold">
-            {{getName(c)}}
-          </p>
+          <div class="flex items-center gap-2">
+            <p class="font-semibold">
+              {{getName(c)}}
+            </p>
+
+            <!-- 🟢 ONLINE -->
+            <span v-if="onlineUsers[getEmail(c)]"
+                  class="w-2 h-2 bg-green-400 rounded-full"></span>
+          </div>
 
           <p class="text-sm opacity-50 truncate max-w-[180px]">
             {{c.last_message}}
@@ -90,10 +85,10 @@ body {background:#020617;color:white;}
           {{ formatTime(c.updated_at) }}
         </p>
 
-        <!-- 🔥 UNREAD FIX -->
-        <div v-if="c.unread > 0"
+        <!-- 🔴 UNREAD -->
+        <div v-if="unreadMap[getEmail(c)] > 0"
              class="bg-red-500 text-xs px-2 py-1 rounded-full mt-1">
-          {{c.unread > 99 ? '99+' : c.unread}}
+          {{ unreadMap[getEmail(c)] > 99 ? '99+' : unreadMap[getEmail(c)] }}
         </div>
 
       </div>
@@ -158,7 +153,8 @@ tab:'chats',
 contacts:[],
 chats:[],
 requests:[],
-search:'', // 🔥 NEW
+unreadMap:{}, // 🔥 NEW
+onlineUsers:{}, // 🔥 NEW
 showModal:false,
 showRequests:false,
 showSelectChat:false,
@@ -169,40 +165,66 @@ pressTimer:null
 }
 },
 
-computed:{
-filteredChats(){
-  return this.chats
-    .filter(c=>{
-      const name = this.getName(c).toLowerCase()
-      return name.includes(this.search.toLowerCase())
-    })
-    .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
-}
-},
-
 async mounted(){
 this.user=JSON.parse(localStorage.getItem("user"))
 this.loadAll()
+
 setInterval(()=>this.loadAll(),2000)
+
+// 🔥 SET ONLINE DIRI SENDIRI
+setInterval(()=>{
+  localStorage.setItem("online_"+this.user.email, Date.now())
+},2000)
+
+// 🔥 CHECK ONLINE USER LAIN
+setInterval(()=>{
+  this.chats.forEach(c=>{
+    const email = this.getEmail(c)
+    const last = localStorage.getItem("online_"+email)
+
+    if(last && Date.now() - last < 5000){
+      this.onlineUsers[email] = true
+    }else{
+      this.onlineUsers[email] = false
+    }
+  })
+},2000)
+
 },
 
 methods:{
 
-// 🔥 FIX NAMA
-getName(c){
-  return c.friend_name || (c.user1===this.user.email?c.user2:c.user1)
+getEmail(c){
+  return c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
 },
 
-// 🔥 AVATAR INITIAL
-getInitial(c){
-  const name = this.getName(c)
-  return name ? name.charAt(0).toUpperCase() : '?'
+getName(c){
+  return c.friend_name || this.getEmail(c)
 },
 
 async loadAll(){
 this.contacts=await (await fetch(API+"/contacts?email="+this.user.email)).json()
 this.chats=await (await fetch(API+"/chats?email="+this.user.email)).json()
 this.requests=await (await fetch(API+"/requests?email="+this.user.email)).json()
+
+await this.calculateUnread()
+},
+
+async calculateUnread(){
+  for(const c of this.chats){
+
+    const email = this.getEmail(c)
+    const room = [this.user.email, email].sort().join("_")
+
+    const res = await fetch(API+"/messages?room="+room)
+    const msgs = await res.json()
+
+    const unread = msgs.filter(m =>
+      m.sender !== this.user.email && !m.is_read
+    ).length
+
+    this.unreadMap[email] = unread
+  }
 },
 
 formatTime(t){
@@ -211,7 +233,7 @@ return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
 
 openChat(c){
 localStorage.setItem("activeChat", JSON.stringify({
-  email: c.friend_email || (c.user1===this.user.email?c.user2:c.user1),
+  email: this.getEmail(c),
   name: this.getName(c)
 }))
 window.location.href="chat.html"
@@ -241,7 +263,7 @@ method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({
 user1:this.user.email,
-user2:this.selectedChat.friend_email
+user2:this.getEmail(this.selectedChat)
 })
 })
 this.selectedChat=null

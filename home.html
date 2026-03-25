@@ -21,22 +21,18 @@ body {background:#020617;color:white;}
 
 <!-- HEADER -->
 <div class="header p-5 flex justify-between items-center">
-
   <div>
     <h1 class="text-lg">Hi, {{user.name}}</h1>
     <p class="text-sm opacity-70">Welcome back</p>
   </div>
 
-  <!-- 🔔 NOTIF -->
   <div class="relative">
     <button @click="showRequests=true" class="text-2xl">🔔</button>
-
     <span v-if="requests.length"
       class="absolute -top-2 -right-2 bg-red-500 text-xs px-1 rounded-full">
       {{requests.length}}
     </span>
   </div>
-
 </div>
 
 <!-- CONTENT -->
@@ -94,19 +90,17 @@ body {background:#020617;color:white;}
 
 </div>
 
+<!-- ===== FLOAT BUTTON CHAT ===== -->
+<button v-if="tab==='chats'"
+  @click="showSelectChat=true"
+  class="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-purple-600 text-2xl shadow-lg">
+  +
+</button>
+
 <!-- ===== BOTTOM NAV ===== -->
 <div class="glass flex justify-around p-4 text-xl">
-
-  <button @click="tab='chats'"
-    :class="tab==='chats'?'active':''">
-    💬
-  </button>
-
-  <button @click="tab='contacts'"
-    :class="tab==='contacts'?'active':''">
-    👤
-  </button>
-
+  <button @click="tab='chats'" :class="tab==='chats'?'active':''">💬</button>
+  <button @click="tab='contacts'" :class="tab==='contacts'?'active':''">👤</button>
 </div>
 
 <!-- ===== ADD FRIEND MODAL ===== -->
@@ -142,13 +136,8 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
 <p>{{r.from_email}}</p>
 
 <div class="flex gap-2 mt-2">
-<button @click="respond(r.id,'accept')" class="bg-green-500 px-2 rounded">
-Accept
-</button>
-
-<button @click="respond(r.id,'reject')" class="bg-red-500 px-2 rounded">
-Reject
-</button>
+<button @click="respond(r.id,'accept')" class="bg-green-500 px-2 rounded">Accept</button>
+<button @click="respond(r.id,'reject')" class="bg-red-500 px-2 rounded">Reject</button>
 </div>
 
 </div>
@@ -171,15 +160,38 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
 <div class="flex gap-2">
 <button @click="deleteContact"
-class="bg-red-500 flex-1 p-2 rounded">
-Delete
-</button>
+class="bg-red-500 flex-1 p-2 rounded">Delete</button>
 
 <button @click="selectedContact=null"
-class="bg-gray-600 flex-1 p-2 rounded">
-Cancel
-</button>
+class="bg-gray-600 flex-1 p-2 rounded">Cancel</button>
 </div>
+
+</div>
+</div>
+
+<!-- ===== START CHAT POPUP ===== -->
+<div v-if="showSelectChat"
+class="fixed inset-0 bg-black/60 flex items-center justify-center">
+
+<div class="glass p-5 rounded-xl w-80 max-h-[400px] overflow-auto">
+
+<h2 class="mb-3">Start Chat</h2>
+
+<div v-for="c in filteredContacts"
+     @click="startChat(c)"
+     class="flex items-center gap-3 p-2 rounded hover:bg-white/10 cursor-pointer">
+
+  <img src="https://i.pravatar.cc/40"
+       class="w-8 h-8 rounded-full">
+
+  <p>{{c.name}}</p>
+
+</div>
+
+<button @click="showSelectChat=false"
+class="mt-3 w-full bg-gray-600 p-2 rounded">
+Close
+</button>
 
 </div>
 </div>
@@ -199,6 +211,7 @@ chats:[],
 requests:[],
 showModal:false,
 showRequests:false,
+showSelectChat:false,
 friendEmail:'',
 selectedContact:null,
 pressTimer:null
@@ -228,6 +241,11 @@ this.chats=await (await fetch(API+"/chats?email="+this.user.email)).json()
 this.requests=await (await fetch(API+"/requests?email="+this.user.email)).json()
 },
 
+startChat(c){
+localStorage.setItem("activeChat",JSON.stringify(c))
+window.location.href="chat.html"
+},
+
 async sendRequest(){
 await fetch(API+"/send-request",{
 method:"POST",
@@ -250,7 +268,6 @@ body:JSON.stringify({id,action})
 this.loadAll()
 },
 
-// 🔥 LONG PRESS
 startPress(c){
 this.pressTimer=setTimeout(()=>{
 this.selectedContact=c
@@ -270,7 +287,6 @@ user_email:this.user.email,
 friend_email:this.selectedContact.email
 })
 })
-
 this.selectedContact=null
 this.loadAll()
 }

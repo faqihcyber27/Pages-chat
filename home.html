@@ -43,7 +43,7 @@ body {background:#020617;color:white;}
 
     <div class="text-3xl mb-4">💬</div>
 
-    <!-- 🔍 SEARCH (TAMBAHAN) -->
+    <!-- 🔍 SEARCH -->
     <input v-model="search"
       placeholder="Search..."
       class="w-full p-2 mb-3 bg-white/10 rounded">
@@ -67,7 +67,7 @@ body {background:#020617;color:white;}
 
         <div>
           <p class="font-semibold">
-            {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
+            {{getName(c)}}
           </p>
 
           <p class="text-sm opacity-50 truncate max-w-[180px]">
@@ -84,7 +84,7 @@ body {background:#020617;color:white;}
           {{ formatTime(c.updated_at) }}
         </p>
 
-        <!-- 🔴 UNREAD FIX -->
+        <!-- 🔴 UNREAD -->
         <div v-if="unreadMap[getEmail(c)] > 0"
              class="bg-red-500 text-xs px-2 py-1 rounded-full mt-1">
           {{ unreadMap[getEmail(c)] > 99 ? '99+' : unreadMap[getEmail(c)] }}
@@ -139,12 +139,14 @@ body {background:#020617;color:white;}
   <button @click="tab='contacts'" :class="tab==='contacts'?'active':''">👤</button>
 </div>
 
-<!-- (SEMUA MODAL TETAP - TIDAK DIUBAH) -->
-
 </div>
 
 <script>
 const API="https://worker-chat.jihadwajib68.workers.dev"
+
+window.onerror = (e)=>{
+  console.log("GLOBAL ERROR:", e)
+}
 
 Vue.createApp({
 data(){
@@ -154,8 +156,8 @@ tab:'chats',
 contacts:[],
 chats:[],
 requests:[],
-search:'', // 🔥 NEW
-unreadMap:{}, // 🔥 NEW
+search:'',
+unreadMap:{},
 showModal:false,
 showRequests:false,
 showSelectChat:false,
@@ -169,7 +171,7 @@ pressTimer:null
 computed:{
 filteredChats(){
   return this.chats.filter(c=>{
-    const name = (c.friend_name || (c.user1===this.user.email?c.user2:c.user1)).toLowerCase()
+    const name = this.getName(c).toLowerCase()
     return name.includes(this.search.toLowerCase())
   })
 }
@@ -184,14 +186,21 @@ setInterval(()=>this.loadAll(),2000)
 methods:{
 
 getEmail(c){
-  return c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
+  if(c.friend_email) return c.friend_email
+  if(c.user1 && c.user2){
+    return c.user1 === this.user.email ? c.user2 : c.user1
+  }
+  return null
+},
+
+getName(c){
+  return c.friend_name || this.getEmail(c)
 },
 
 async loadAll(){
 this.contacts=await (await fetch(API+"/contacts?email="+this.user.email)).json()
 this.chats=await (await fetch(API+"/chats?email="+this.user.email)).json()
 this.requests=await (await fetch(API+"/requests?email="+this.user.email)).json()
-
 await this.calculateUnread()
 },
 
@@ -199,14 +208,21 @@ async calculateUnread(){
   for(const c of this.chats){
 
     const email = this.getEmail(c)
-    const room = [this.user.email, email].sort().join("_")
+    if(!email) continue
 
-    const res = await fetch(API+"/messages?room="+room)
-    const msgs = await res.json()
+    try{
+      const room = [this.user.email, email].sort().join("_")
 
-    this.unreadMap[email] = msgs.filter(m =>
-      m.sender !== this.user.email && !m.is_read
-    ).length
+      const res = await fetch(API+"/messages?room="+room)
+      const msgs = await res.json()
+
+      this.unreadMap[email] = (msgs || []).filter(m =>
+        m.sender !== this.user.email && !m.is_read
+      ).length
+
+    }catch(e){
+      console.log("unread error", e)
+    }
   }
 },
 
@@ -214,23 +230,29 @@ formatTime(t){
 return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
 },
 
-async openChat(c){
+openChat(c){
 
-// 🔥 MARK AS READ
-await fetch(API+"/mark-read",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-room:[this.user.email,this.getEmail(c)].sort().join("_"),
-user:this.user.email
-})
-})
+  const email = this.getEmail(c)
+  if(!email) return
 
-localStorage.setItem("activeChat", JSON.stringify({
-  email: this.getEmail(c),
-  name: c.friend_name
-}))
-window.location.href="chat.html"
+  const room = [this.user.email, email].sort().join("_")
+
+  // 🔥 NON BLOCKING
+  fetch(API+"/mark-read",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      room:room,
+      user:this.user.email
+    })
+  })
+
+  localStorage.setItem("activeChat", JSON.stringify({
+    email: email,
+    name: this.getName(c)
+  }))
+
+  window.location.href="chat.html"
 },
 
 startChat(c){
@@ -249,60 +271,6 @@ this.pressTimer=setTimeout(()=>{
 
 cancelPress(){
 clearTimeout(this.pressTimer)
-},
-
-async deleteChat(){
-await fetch(API+"/delete-chat",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-user1:this.user.email,
-user2:this.selectedChat.friend_email
-})
-})
-this.selectedChat=null
-this.loadAll()
-},
-
-async sendRequest(){
-await fetch(API+"/send-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-from_email:this.user.email,
-to_email:this.friendEmail
-})
-})
-this.showModal=false
-this.loadAll()
-},
-
-async respond(id,action){
-await fetch(API+"/respond-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({id,action})
-})
-this.loadAll()
-},
-
-startPress(c){
-this.pressTimer=setTimeout(()=>{
-this.selectedContact=c
-},600)
-},
-
-async deleteContact(){
-await fetch(API+"/delete-contact",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-user_email:this.user.email,
-friend_email:this.selectedContact.email
-})
-})
-this.selectedContact=null
-this.loadAll()
 }
 
 }

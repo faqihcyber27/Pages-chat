@@ -51,7 +51,24 @@ body {
       'px-4 py-2 rounded-2xl max-w-[70%]',
       m.sender===user.email ? 'me' : 'them'
     ]">
-      {{m.text}}
+      <div v-if="m.file">
+
+  <!-- IMAGE -->
+  <img v-if="m.file_type && m.file_type.includes('image')"
+       :src="m.file"
+       class="rounded-lg max-w-[200px]">
+
+  <!-- FILE -->
+  <a v-else :href="m.file" download
+     class="text-blue-400 underline">
+     {{m.file_name}}
+  </a>
+
+</div>
+
+<div v-else>
+  {{m.text}}
+</div>
     </div>
 
   </div>
@@ -65,22 +82,40 @@ class="text-xs opacity-60 px-3 pb-2">
 </div>
 
 <!-- INPUT -->
-<div class="p-3 flex gap-2 bg-black/40">
+<div class="p-3 flex gap-2 items-center bg-black/40">
 
+  <!-- 📎 FILE -->
+  <label class="text-xl cursor-pointer">
+    📎
+    <input type="file" hidden @change="sendFile">
+  </label>
+
+  <!-- 😊 EMOJI -->
+  <button @click="toggleEmoji" class="text-xl">😊</button>
+
+  <!-- INPUT -->
   <input v-model="text"
          @input="sendTyping"
          @keyup.enter="send"
          placeholder="Type message..."
          class="flex-1 px-4 py-2 rounded-full bg-white/10 outline-none">
 
+  <!-- SEND -->
   <button v-if="text"
           @click="send"
           class="bg-purple-600 px-4 py-2 rounded-full">
     ➤
   </button>
 
-  <button v-else class="text-xl">🎤</button>
+</div>
 
+<!-- 😊 EMOJI PICKER -->
+<div v-if="showEmoji" class="p-3 bg-black/60 flex flex-wrap gap-2">
+  <span v-for="e in emojis"
+        @click="addEmoji(e)"
+        class="text-xl cursor-pointer">
+    {{e}}
+  </span>
 </div>
 
 </div>
@@ -99,6 +134,9 @@ ws:null,
 room:'',
 isConnected:false,
 lastCount:0,
+
+showEmoji:false,
+emojis:["😀","😂","😍","🔥","👍","🙏","😭","😎","😡","🥶"]
 
 // 🔥 NEW
 typingUser:'',
@@ -137,25 +175,7 @@ this.ws.onopen = () => {
   }))
 }
 
-this.ws.onmessage = (e)=>{
-  const msg = JSON.parse(e.data)
-
-  // ===== MESSAGE =====
-  if(msg.type === "message" || !msg.type){
-
-    if(msg.sender === this.user.email) return
-
-    const last = this.messages[this.messages.length - 1]
-    if(!last || last.text !== msg.text){
-      this.messages.push(msg)
-    }
-
-    requestAnimationFrame(()=>{
-      this.scrollBottom()
-    })
-  }
-  
-// 🔥 ONLINE HEARTBEAT
+// 🔥 FIX POSISI
 setInterval(()=>{
   if(this.ws && this.ws.readyState===1){
     this.ws.send(JSON.stringify({
@@ -164,6 +184,24 @@ setInterval(()=>{
     }))
   }
 },3000)
+
+this.ws.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  // ===== MESSAGE =====
+  if(msg.type === "message" || !msg.type){
+
+    if(msg.sender === this.user.email) return
+
+    // 🔥 FIX DUPLICATE + SUPPORT FILE
+    if(!last || (last.text !== msg.text && last.file !== msg.file)){
+    this.messages.push(msg)
+  }
+
+    requestAnimationFrame(()=>{
+      this.scrollBottom()
+    })
+  }
   
   // ===== TYPING =====
   if(msg.type === "typing" && msg.sender !== this.user.email){
@@ -192,12 +230,47 @@ setInterval(()=>{
 
 methods:{
 
+toggleEmoji(){
+  this.showEmoji = !this.showEmoji
+},
+
+addEmoji(e){
+  this.text += e
+  this.showEmoji = false
+},
+
+sendFile(e){
+  const file = e.target.files[0]
+  if(!file) return
+
+  const reader = new FileReader()
+
+  reader.onload = () => {
+    const payload = {
+      type:"message",
+      room:this.room,
+      sender:this.user.email,
+      file:reader.result,
+      file_name:file.name,
+      file_type:file.type
+    }
+
+    this.ws.send(JSON.stringify(payload))
+
+    this.messages.push(payload)
+    this.scrollBottom()
+  }
+
+  reader.readAsDataURL(file)
+},
+
 // 🔥 TYPING SEND
 sendTyping(){
 if(this.ws && this.ws.readyState===1){
   this.ws.send(JSON.stringify({
     type:"typing",
-    sender:this.user.email
+    sender:this.user.email,
+    name:this.user.name
   }))
 }
 },

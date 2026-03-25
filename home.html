@@ -22,7 +22,7 @@ body {background:#020617;color:white;}
 <!-- HEADER -->
 <div class="header p-5 flex justify-between items-center">
   <div>
-    <h1 class="text-lg">Hi, {{user.name}}</h1>
+    <h1 class="text-lg font-semibold">Hi, {{user.name}}</h1>
     <p class="text-sm opacity-70">Welcome back</p>
   </div>
 
@@ -43,18 +43,29 @@ body {background:#020617;color:white;}
 
     <div class="text-3xl mb-4">💬</div>
 
-    <div v-if="chats.length===0" class="text-center mt-20">
+    <div v-if="chats.length===0" class="text-center mt-20 opacity-60">
       No chats yet
     </div>
 
     <div v-for="c in chats"
-         class="glass p-4 mb-3 rounded-xl">
+         @click="openChat(c)"
+         class="glass p-4 mb-3 rounded-xl flex justify-between items-center cursor-pointer">
 
-      <p class="font-semibold">
-        {{c.user1===user.email?c.user2:c.user1}}
-      </p>
+      <div>
+        <p class="font-semibold">
+          {{c.user1===user.email?c.user2:c.user1}}
+        </p>
 
-      <p class="text-sm opacity-50">{{c.last_message}}</p>
+        <p class="text-sm opacity-50 truncate max-w-[200px]">
+          {{c.last_message}}
+        </p>
+      </div>
+
+      <!-- 🔴 UNREAD -->
+      <div v-if="c.unread > 0"
+           class="bg-red-500 text-xs px-2 py-1 rounded-full">
+        {{c.unread}}
+      </div>
 
     </div>
 
@@ -70,7 +81,7 @@ body {background:#020617;color:white;}
       + Add Friend
     </button>
 
-    <div v-if="filteredContacts.length===0" class="text-center mt-20">
+    <div v-if="filteredContacts.length===0" class="text-center mt-20 opacity-60">
       No contacts yet
     </div>
 
@@ -90,20 +101,20 @@ body {background:#020617;color:white;}
 
 </div>
 
-<!-- ===== FLOAT BUTTON CHAT ===== -->
+<!-- FLOAT BUTTON CHAT -->
 <button v-if="tab==='chats'"
   @click="showSelectChat=true"
   class="fixed bottom-20 right-6 w-14 h-14 rounded-full bg-purple-600 text-2xl shadow-lg">
   +
 </button>
 
-<!-- ===== BOTTOM NAV ===== -->
+<!-- BOTTOM NAV -->
 <div class="glass flex justify-around p-4 text-xl">
   <button @click="tab='chats'" :class="tab==='chats'?'active':''">💬</button>
   <button @click="tab='contacts'" :class="tab==='contacts'?'active':''">👤</button>
 </div>
 
-<!-- ===== ADD FRIEND MODAL ===== -->
+<!-- ADD FRIEND -->
 <div v-if="showModal"
 class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
@@ -123,7 +134,7 @@ Send Request
 </div>
 </div>
 
-<!-- ===== REQUEST POPUP ===== -->
+<!-- REQUEST POPUP -->
 <div v-if="showRequests"
 class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
@@ -150,7 +161,7 @@ Close
 </div>
 </div>
 
-<!-- ===== DELETE POPUP ===== -->
+<!-- DELETE CONTACT -->
 <div v-if="selectedContact"
 class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
@@ -169,7 +180,7 @@ class="bg-gray-600 flex-1 p-2 rounded">Cancel</button>
 </div>
 </div>
 
-<!-- ===== START CHAT POPUP ===== -->
+<!-- START CHAT -->
 <div v-if="showSelectChat"
 class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
@@ -241,8 +252,14 @@ this.chats=await (await fetch(API+"/chats?email="+this.user.email)).json()
 this.requests=await (await fetch(API+"/requests?email="+this.user.email)).json()
 },
 
+openChat(c){
+const email = c.user1===this.user.email ? c.user2 : c.user1
+localStorage.setItem("activeChat", JSON.stringify({email}))
+window.location.href="chat.html"
+},
+
 startChat(c){
-localStorage.setItem("activeChat",JSON.stringify(c))
+localStorage.setItem("activeChat", JSON.stringify(c))
 window.location.href="chat.html"
 },
 

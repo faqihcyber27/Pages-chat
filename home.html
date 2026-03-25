@@ -68,7 +68,21 @@ body {background:#020617;color:white;}
 
           <!-- 🔥 NAME + ONLINE -->
           <p class="font-semibold flex items-center gap-2">
-            {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
+
+          <!-- 🔥 TYPING DI NAMA -->
+          <span v-if="typingUsers[getFriendEmail(c)]"
+          class="text-green-400">
+          {{ typingUsers[getFriendEmail(c)] }} sedang mengetik...
+          </span>
+
+          <!-- NORMAL -->
+          <span v-else>
+          {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
+          </span>
+
+          <!-- ONLINE DOT -->
+          <span v-if="onlineUsers.includes(getFriendEmail(c))"
+          class="w-2 h-2 bg-green-400 rounded-full"></span>
 
             <span v-if="onlineUsers.includes(c.friend_email)"
               class="w-2 h-2 bg-green-400 rounded-full"></span>
@@ -78,12 +92,27 @@ body {background:#020617;color:white;}
           <p class="text-sm truncate max-w-[180px]"
              :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-50'">
 
-            <span v-if="typingUsers[c.friend_email]">
-              typing...
+            <span v-if="typingUsers[getFriendEmail(c)]">
+              sedang mengetik...
+            </span>
+
+            <!-- 📷 FOTO HARUS DI ATAS -->
+            <span v-else-if="c.last_file_type && c.last_file_type.startsWith('image')">
+              📷 Foto
+            </span>
+
+            <!-- 📎 FILE -->
+            <span v-else-if="c.last_file_type">
+              📎 File
+            </span>
+
+            <!-- 💬 TEXT -->
+            <span v-else-if="c.last_message">
+              {{c.last_message}}
             </span>
 
             <span v-else>
-              {{c.last_message}}
+              No message
             </span>
 
           </p>
@@ -336,7 +365,7 @@ this.ws.onmessage = (e)=>{
   }
 
   if(msg.type==="typing"){
-    this.typingUsers[msg.sender]=true
+    this.typingUsers[msg.sender] = msg.name || msg.sender
 
     setTimeout(()=>{
       delete this.typingUsers[msg.sender]
@@ -347,6 +376,10 @@ this.ws.onmessage = (e)=>{
 },
 
 methods:{
+
+getFriendEmail(c){
+  return c.friend_email || (c.user1===this.user.email ? c.user2 : c.user1)
+},
 
 async loadAll(){
 this.contacts=await (await fetch(API+"/contacts?email="+this.user.email)).json()

@@ -1,141 +1,72 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
+<title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Auth</title>
 
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+<script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
 body {
   background: radial-gradient(circle at top, #0f172a, #020617);
 }
-
-/* glass card */
 .glass {
   background: rgba(255,255,255,0.05);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.1);
 }
-
-/* neon glow */
 .neon {
   box-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6;
 }
-
-/* input */
-.input {
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-}
-
-/* smooth animation */
-.fade {
-  transition: all 0.3s ease;
-}
 </style>
-
 </head>
 
 <body class="flex items-center justify-center h-screen text-white">
 
 <div id="app" class="w-full max-w-sm px-4">
 
-  <!-- CARD -->
-  <div class="glass rounded-2xl p-6 shadow-xl fade">
+<div class="glass p-6 rounded-xl">
 
-    <!-- LOGO -->
-    <div class="flex justify-center mb-4">
-      <div class="w-12 h-12 rounded-full border-2 border-blue-500 flex items-center justify-center animate-spin">
-        <div class="w-6 h-6 border-2 border-blue-400 rounded-full"></div>
-      </div>
-    </div>
+<h2 class="text-center mb-4">{{ isLogin?'Login':'Register' }}</h2>
 
-    <!-- TITLE -->
-    <h2 class="text-center text-xl font-semibold mb-1">
-      {{ isLogin ? 'Welcome Back' : 'Create Account' }}
-    </h2>
+<input v-if="!isLogin" v-model="name" placeholder="Name" class="w-full mb-2 p-2 rounded bg-white/10">
+<input v-model="email" placeholder="Email" class="w-full mb-2 p-2 rounded bg-white/10">
+<input type="password" v-model="password" placeholder="Password" class="w-full mb-2 p-2 rounded bg-white/10">
 
-    <p class="text-center text-gray-400 text-sm mb-4">
-      {{ isLogin ? 'Login to continue' : 'Register new account' }}
-    </p>
+<button @click="submit" class="bg-blue-500 w-full p-2 rounded neon">
+{{ isLogin?'Login':'Register' }}
+</button>
 
-    <!-- FORM -->
-    <input v-if="!isLogin" v-model="name"
-      placeholder="Full Name"
-      class="input w-full mb-3 px-4 py-2 rounded-lg outline-none">
+<p class="text-center mt-3">
+<a href="#" @click="isLogin=!isLogin">
+{{ isLogin?'Register':'Login' }}
+</a>
+</p>
 
-    <input v-model="email"
-      placeholder="Email Address"
-      class="input w-full mb-3 px-4 py-2 rounded-lg outline-none">
-
-    <input type="password" v-model="password"
-      placeholder="Password"
-      class="input w-full mb-4 px-4 py-2 rounded-lg outline-none">
-
-    <!-- BUTTON -->
-    <button @click="submit"
-      class="w-full py-2 rounded-lg bg-blue-500 hover:bg-blue-600 neon transition">
-      {{ isLogin ? 'Login' : 'Register' }}
-    </button>
-
-    <!-- SWITCH -->
-    <p class="text-center mt-4 text-sm text-gray-400">
-      {{ isLogin ? "Don't have account?" : "Already have account?" }}
-      <span @click="toggle"
-        class="text-blue-400 cursor-pointer ml-1">
-        {{ isLogin ? 'Register' : 'Login' }}
-      </span>
-    </p>
-
-  </div>
+</div>
 
 </div>
 
 <script>
-const { createApp, ref } = Vue
+const API="https://worker-chat.jihadwajib68.workers.dev"
 
-createApp({
-  setup() {
-    const isLogin = ref(true)
-    const name = ref("")
-    const email = ref("")
-    const password = ref("")
-
-    const API = "https://worker-chat.jihadwajib68.workers.dev"
-
-    function toggle() {
-      isLogin.value = !isLogin.value
-    }
-
-    async function submit() {
-      const endpoint = isLogin.value ? "/login" : "/register"
-
-      const res = await fetch(API + endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.value,
-          email: email.value,
-          password: password.value
-        })
-      })
-
-      const data = await res.json()
-
-      if (data.token) {
-        localStorage.setItem("user", JSON.stringify(data.user))
-        alert("Login berhasil")
-        window.location.href = "chat.html"
-      } else {
-        alert(data.error || "Success")
-      }
-    }
-
-    return { isLogin, name, email, password, toggle, submit }
-  }
+Vue.createApp({
+data(){return{isLogin:true,name:'',email:'',password:''}},
+methods:{
+async submit(){
+const res=await fetch(API+(this.isLogin?"/login":"/register"),{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(this)
+})
+const d=await res.json()
+if(d.token){
+localStorage.setItem("user",JSON.stringify(d.user))
+location.href="home.html"
+}else alert(d.error)
+}
+}
 }).mount("#app")
 </script>
 

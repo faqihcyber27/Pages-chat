@@ -1,26 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-body {
-  background: radial-gradient(circle at top, #0f172a, #020617);
-  color: white;
-}
-
-/* bubble */
-.me {
-  background: #7c3aed;
-}
-
-.them {
-  background: rgba(255,255,255,0.08);
-}
+body {background:#020617;color:white;}
+.me {background:#7c3aed;}
+.them {background:rgba(255,255,255,0.1);}
 </style>
 </head>
 
@@ -29,61 +17,45 @@ body {
 <div id="app" class="h-screen flex flex-col">
 
 <!-- HEADER -->
-<div class="p-4 flex items-center gap-3 bg-purple-600">
+<div class="p-4 bg-purple-600 flex items-center gap-3">
+<button onclick="history.back()">←</button>
+<p>{{chat.email}}</p>
+</div>
 
-  <button onclick="history.back()">←</button>
+<!-- CHAT -->
+<div ref="box" class="flex-1 overflow-auto p-3 space-y-2">
 
-  <img src="https://i.pravatar.cc/40"
-       class="w-9 h-9 rounded-full">
+<div v-for="m in messages"
+     :class="m.sender===user.email?'flex justify-end':'flex'">
 
-  <div>
-    <p class="font-semibold">{{chat.name}}</p>
-    <p class="text-xs opacity-70">online</p>
+  <div :class="[
+    'px-3 py-2 rounded-xl max-w-[70%]',
+    m.sender===user.email?'me':'them'
+  ]">
+    {{m.text}}
   </div>
 
 </div>
-
-<!-- CHAT AREA -->
-<div ref="chatBox"
-     class="flex-1 overflow-auto p-3 space-y-2">
-
-  <div v-for="m in messages"
-       :class="m.sender===user.email ? 'flex justify-end' : 'flex'">
-
-    <div :class="[
-      'px-4 py-2 rounded-2xl max-w-[70%]',
-      m.sender===user.email ? 'me' : 'them'
-    ]">
-
-      {{m.text}}
-
-    </div>
-
-  </div>
 
 </div>
 
 <!-- INPUT -->
-<div class="p-3 flex gap-2 bg-black/40">
+<div class="p-2 flex gap-2">
 
-  <input v-model="text"
-         placeholder="Type message..."
-         class="flex-1 px-4 py-2 rounded-full bg-white/10 outline-none">
+<input v-model="text"
+class="flex-1 p-2 text-black rounded">
 
-  <button v-if="text"
-          @click="send"
-          class="bg-purple-600 px-4 py-2 rounded-full">
-    ➤
-  </button>
-
-  <button v-else class="text-xl">🎤</button>
+<button @click="send"
+class="bg-purple-600 px-3 rounded">
+Send
+</button>
 
 </div>
 
 </div>
 
 <script>
-const API = "https://worker-chat.jihadwajib68.workers.dev"
+const API="https://worker-chat.jihadwajib68.workers.dev"
 
 Vue.createApp({
 data(){
@@ -99,54 +71,66 @@ room:''
 
 async mounted(){
 
-// ambil user & target chat
 this.user = JSON.parse(localStorage.getItem("user"))
 this.chat = JSON.parse(localStorage.getItem("activeChat"))
 
-// 🔥 generate room id (HARUS SORT)
+if(!this.chat || !this.chat.email){
+  alert("Chat tidak valid")
+  return
+}
+
+// 🔥 FIX ROOM (WAJIB)
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
-// ===== LOAD HISTORY =====
+console.log("ROOM:", this.room)
+
+// ===== LOAD HISTORY
 const res = await fetch(API + "/messages?room=" + this.room)
 this.messages = await res.json()
 
-this.scrollBottom()
+this.scroll()
 
-// ===== CONNECT WS =====
+// ===== CONNECT WS (FIX URL)
 this.ws = new WebSocket(
-  API.replace("https","wss") + "/ws?room=" + this.room
+  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
 
-this.ws.onmessage = (e)=>{
-  this.messages.push(JSON.parse(e.data))
-  this.scrollBottom()
+this.ws.onopen = () => {
+  console.log("WS CONNECTED ✅")
+}
+
+this.ws.onerror = (e) => {
+  console.log("WS ERROR ❌", e)
+}
+
+this.ws.onmessage = (e) => {
+  const msg = JSON.parse(e.data)
+
+  this.messages.push(msg)
+  this.scroll()
 }
 
 },
 
 methods:{
-
 send(){
-if(!this.text) return
+if(!this.text || !this.ws) return
 
 this.ws.send(JSON.stringify({
-  room:this.room,
-  sender:this.user.email,
-  text:this.text
+room:this.room,
+sender:this.user.email,
+text:this.text
 }))
 
-this.text = ""
+this.text=""
 },
 
-scrollBottom(){
+scroll(){
 this.$nextTick(()=>{
-  const el = this.$refs.chatBox
-  el.scrollTop = el.scrollHeight
+this.$refs.box.scrollTop=this.$refs.box.scrollHeight
 })
 }
-
 }
-
 }).mount("#app")
 </script>
 

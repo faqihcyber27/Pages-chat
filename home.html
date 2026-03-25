@@ -20,15 +20,16 @@ body {background:#020617;color:white;}
 <div id="app" class="h-screen flex flex-col">
 
 <!-- HEADER -->
-<div class="header p-4 flex justify-between items-center">
+<div class="header p-5 flex justify-between items-center">
 
-  <h1 class="text-lg font-semibold">
-    {{ tab==='chats' ? 'Messages' : 'Contacts' }}
-  </h1>
+  <div>
+    <h1 class="text-lg">Hi, {{user.name}}</h1>
+    <p class="text-sm opacity-70">Welcome back</p>
+  </div>
 
-  <!-- 🔔 NOTIFICATION -->
+  <!-- 🔔 NOTIF -->
   <div class="relative">
-    <button @click="showRequests=true">🔔</button>
+    <button @click="showRequests=true" class="text-2xl">🔔</button>
 
     <span v-if="requests.length"
       class="absolute -top-2 -right-2 bg-red-500 text-xs px-1 rounded-full">
@@ -44,7 +45,6 @@ body {background:#020617;color:white;}
   <!-- ===== CHATS ===== -->
   <div v-if="tab==='chats'">
 
-    <!-- ICON -->
     <div class="text-3xl mb-4">💬</div>
 
     <div v-if="chats.length===0" class="text-center mt-20">
@@ -52,9 +52,12 @@ body {background:#020617;color:white;}
     </div>
 
     <div v-for="c in chats"
-         class="glass p-3 mb-2 rounded-xl">
+         class="glass p-4 mb-3 rounded-xl">
 
-      <p>{{c.user1===user.email?c.user2:c.user1}}</p>
+      <p class="font-semibold">
+        {{c.user1===user.email?c.user2:c.user1}}
+      </p>
+
       <p class="text-sm opacity-50">{{c.last_message}}</p>
 
     </div>
@@ -64,11 +67,10 @@ body {background:#020617;color:white;}
   <!-- ===== CONTACTS ===== -->
   <div v-if="tab==='contacts'">
 
-    <!-- ICON -->
     <div class="text-3xl mb-4">👤</div>
 
     <button @click="showModal=true"
-      class="bg-purple-600 px-3 py-1 rounded mb-3">
+      class="bg-purple-600 px-4 py-2 rounded-lg mb-4 w-full">
       + Add Friend
     </button>
 
@@ -77,9 +79,14 @@ body {background:#020617;color:white;}
     </div>
 
     <div v-for="c in filteredContacts"
-         class="glass p-3 mb-2 rounded-xl">
+         @touchstart="startPress(c)"
+         @touchend="cancelPress"
+         class="glass p-3 mb-3 rounded-xl flex items-center gap-3">
 
-      {{c.name}} ({{c.email}})
+      <img src="https://i.pravatar.cc/40"
+           class="w-10 h-10 rounded-full">
+
+      <p class="font-medium">{{c.name}}</p>
 
     </div>
 
@@ -88,7 +95,7 @@ body {background:#020617;color:white;}
 </div>
 
 <!-- ===== BOTTOM NAV ===== -->
-<div class="glass flex justify-around p-3">
+<div class="glass flex justify-around p-4 text-xl">
 
   <button @click="tab='chats'"
     :class="tab==='chats'?'active':''">
@@ -126,13 +133,9 @@ Send Request
 <div v-if="showRequests"
 class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
-<div class="glass p-5 rounded-xl w-80 max-h-[400px] overflow-auto">
+<div class="glass p-5 rounded-xl w-80">
 
 <h2 class="mb-3">Requests</h2>
-
-<div v-if="requests.length===0" class="text-center">
-No request
-</div>
 
 <div v-for="r in requests" class="mb-3">
 
@@ -158,6 +161,29 @@ Close
 </div>
 </div>
 
+<!-- ===== DELETE POPUP ===== -->
+<div v-if="selectedContact"
+class="fixed inset-0 bg-black/60 flex items-center justify-center">
+
+<div class="glass p-5 rounded-xl w-72 text-center">
+
+<p class="mb-4">Delete {{selectedContact.name}}?</p>
+
+<div class="flex gap-2">
+<button @click="deleteContact"
+class="bg-red-500 flex-1 p-2 rounded">
+Delete
+</button>
+
+<button @click="selectedContact=null"
+class="bg-gray-600 flex-1 p-2 rounded">
+Cancel
+</button>
+</div>
+
+</div>
+</div>
+
 </div>
 
 <script>
@@ -173,14 +199,15 @@ chats:[],
 requests:[],
 showModal:false,
 showRequests:false,
-friendEmail:''
+friendEmail:'',
+selectedContact:null,
+pressTimer:null
 }
 },
 
 computed:{
-// 🔥 FIX DUPLICATE CONTACT
 filteredContacts(){
-const seen = new Set()
+const seen=new Set()
 return this.contacts.filter(c=>{
 if(seen.has(c.email)) return false
 seen.add(c.email)
@@ -220,6 +247,31 @@ method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({id,action})
 })
+this.loadAll()
+},
+
+// 🔥 LONG PRESS
+startPress(c){
+this.pressTimer=setTimeout(()=>{
+this.selectedContact=c
+},600)
+},
+
+cancelPress(){
+clearTimeout(this.pressTimer)
+},
+
+async deleteContact(){
+await fetch(API+"/delete-contact",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user_email:this.user.email,
+friend_email:this.selectedContact.email
+})
+})
+
+this.selectedContact=null
 this.loadAll()
 }
 }

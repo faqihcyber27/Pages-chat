@@ -13,14 +13,8 @@ body {
   color: white;
 }
 
-/* bubble */
-.me {
-  background: #7c3aed;
-}
-
-.them {
-  background: rgba(255,255,255,0.08);
-}
+.me { background: #7c3aed; }
+.them { background: rgba(255,255,255,0.08); }
 </style>
 </head>
 
@@ -30,7 +24,6 @@ body {
 
 <!-- HEADER -->
 <div class="p-4 flex items-center gap-3 bg-purple-600">
-
   <button onclick="history.back()">←</button>
 
   <img src="https://i.pravatar.cc/40"
@@ -40,7 +33,6 @@ body {
     <p class="font-semibold">{{chat.name || chat.email}}</p>
     <p class="text-xs opacity-70">online</p>
   </div>
-
 </div>
 
 <!-- CHAT AREA -->
@@ -55,9 +47,7 @@ body {
       'px-4 py-2 rounded-2xl max-w-[70%] transition-all duration-200',
       m.sender===user.email ? 'me' : 'them'
     ]">
-
       {{m.text}}
-
     </div>
 
   </div>
@@ -110,25 +100,36 @@ if(!this.chat || !this.chat.email){
   return
 }
 
-// 🔥 ROOM CONSISTENT
+// 🔥 ROOM HARUS SAMA DI SEMUA USER
 this.room = [this.user.email, this.chat.email].sort().join("_")
 console.log("ROOM:", this.room)
 
 // ===== LOAD HISTORY
 const res = await fetch(API + "/messages?room=" + this.room)
-this.messages = await res.json()
+const data = await res.json()
+
+// 🔥 anti duplicate
+this.messages = data.filter((v,i,a)=>
+  i===a.findIndex(t=>t.id===v.id)
+)
 
 this.scrollBottom(true)
 
-// ===== CONNECT WS (FIXED)
+// ===== CONNECT WS
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
 
-// ===== EVENTS
-this.ws.onopen = () => {
+this.ws.onopen = async () => {
   console.log("WS CONNECTED ✅")
   this.isConnected = true
+
+  // 🔥 refresh kecil biar sinkron (anti delay user lain)
+  setTimeout(async ()=>{
+    const res = await fetch(API + "/messages?room=" + this.room)
+    this.messages = await res.json()
+    this.scrollBottom(true)
+  },200)
 }
 
 this.ws.onerror = (e) => {
@@ -139,13 +140,23 @@ this.ws.onclose = () => {
   console.log("WS CLOSED ❌")
 }
 
+// 🔥 FIX ANTI DELAY
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  console.log("RECEIVED:", msg)
+  // ❗ skip pesan sendiri
+  if(msg.sender === this.user.email) return
 
-  this.messages = [...this.messages, msg]
-  this.scrollBottom()
+  // 🔥 push langsung (lebih cepat dari spread)
+  this.messages.push(msg)
+
+  // 🔥 paksa render cepat
+  this.$forceUpdate?.()
+
+  // 🔥 scroll smooth
+  requestAnimationFrame(()=>{
+    this.scrollBottom()
+  })
 }
 
 },
@@ -154,16 +165,16 @@ methods:{
 
 send(){
 
-// ❌ JANGAN KIRIM JIKA WS BELUM CONNECT
 if(!this.text || !this.isConnected){
   console.log("WS belum connect ❌")
   return
 }
 
-// ✅ tampilkan langsung (optimistic UI)
+// 🔥 tampil langsung (optimistic)
 this.messages.push({
   sender:this.user.email,
-  text:this.text
+  text:this.text,
+  local:true
 })
 
 this.ws.send(JSON.stringify({

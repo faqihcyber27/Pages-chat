@@ -76,7 +76,7 @@ body {background:#020617;color:white;}
 
           <!-- 🔥 MESSAGE / TYPING -->
           <p class="text-sm truncate max-w-[180px]"
-             :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-50'">
+             :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-50'">
 
            <span v-if="typingUsers[getFriendEmail(c)]">
   {{ typingUsers[getFriendEmail(c)] }} is typing...

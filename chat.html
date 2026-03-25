@@ -268,7 +268,7 @@ sendFile(e){
       sender:this.user.email,
       file:reader.result,
       file_name:file.name,
-      file_type:file.type
+      file_type:file.type || "image"
     }
 
     this.ws.send(JSON.stringify(payload))

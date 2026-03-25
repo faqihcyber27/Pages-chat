@@ -154,10 +154,20 @@ this.ws.onmessage = (e)=>{
       this.scrollBottom()
     })
   }
-
+  
+// 🔥 ONLINE HEARTBEAT
+setInterval(()=>{
+  if(this.ws && this.ws.readyState===1){
+    this.ws.send(JSON.stringify({
+      type:"online",
+      user:this.user.email
+    }))
+  }
+},3000)
+  
   // ===== TYPING =====
   if(msg.type === "typing" && msg.sender !== this.user.email){
-    this.typingUser = msg.sender
+    this.typingUser = msg.name
 
     setTimeout(()=>{
       this.typingUser = ''
@@ -165,10 +175,10 @@ this.ws.onmessage = (e)=>{
   }
 
   // ===== ONLINE =====
-  if(msg.type === "online"){
-    if(!this.onlineUsers.includes(msg.user)){
-      this.onlineUsers.push(msg.user)
-    }
+  if(msg.type==="online"){
+  this.onlineUsers = this.onlineUsers.filter(u => u !== msg.user)
+  this.onlineUsers.push(msg.user)
+  }
   }
 }
 

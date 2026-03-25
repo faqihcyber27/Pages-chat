@@ -47,12 +47,12 @@ body {background:#020617;color:white;}
       placeholder="Search chat..."
       class="w-full p-2 mb-3 bg-white/10 rounded">
 
-    <div v-if="filteredChats.length===0" class="text-center mt-20 opacity-60">
+    <div v-if="sortedChats.length===0" class="text-center mt-20 opacity-60">
       No chats yet
     </div>
 
     <!-- CHAT LIST -->
-    <div v-for="c in filteredChats"
+    <div v-for="c in sortedChats"
          @click="openChat(c)"
          @touchstart="startChatPress(c)"
          @touchend="cancelPress"
@@ -66,20 +66,23 @@ body {background:#020617;color:white;}
 
         <div>
 
-          <!-- 🔥 NAME + ONLINE -->
+          <!-- NAME + ONLINE -->
           <p class="font-semibold flex items-center gap-2">
             {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
 
-            <span v-if="onlineUsers.includes(c.friend_email)"
+            <span v-if="onlineUsers.includes(c.friend_email || (c.user1===user.email?c.user2:c.user1))"
               class="w-2 h-2 bg-green-400 rounded-full"></span>
+
+            <!-- 📌 PIN -->
+            <span v-if="c.pinned" class="text-yellow-400 text-xs">📌</span>
           </p>
 
-          <!-- 🔥 MESSAGE / TYPING -->
+          <!-- MESSAGE / TYPING -->
           <p class="text-sm truncate max-w-[180px]"
              :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-50'">
 
             <span v-if="typingUsers[c.friend_email]">
-              typing...
+              {{ typingUsers[c.friend_email] }} is typing...
             </span>
 
             <span v-else>
@@ -153,73 +156,7 @@ body {background:#020617;color:white;}
   <button @click="tab='contacts'" :class="tab==='contacts'?'active':''">👤</button>
 </div>
 
-<!-- ADD FRIEND -->
-<div v-if="showModal"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-80">
-
-<h2 class="mb-3">Add Friend</h2>
-
-<input v-model="friendEmail"
-placeholder="Email"
-class="w-full p-2 mb-3 bg-white/10 rounded">
-
-<button @click="sendRequest"
-class="bg-purple-600 w-full p-2 rounded">
-Send Request
-</button>
-
-</div>
-</div>
-
-<!-- REQUEST POPUP -->
-<div v-if="showRequests"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-80">
-
-<h2 class="mb-3">Requests</h2>
-
-<div v-for="r in requests" class="mb-3">
-
-<p>{{r.from_email}}</p>
-
-<div class="flex gap-2 mt-2">
-<button @click="respond(r.id,'accept')" class="bg-green-500 px-2 rounded">Accept</button>
-<button @click="respond(r.id,'reject')" class="bg-red-500 px-2 rounded">Reject</button>
-</div>
-
-</div>
-
-<button @click="showRequests=false"
-class="mt-3 w-full bg-gray-600 p-2 rounded">
-Close
-</button>
-
-</div>
-</div>
-
-<!-- DELETE CONTACT -->
-<div v-if="selectedContact"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-72 text-center">
-
-<p class="mb-4">Delete {{selectedContact.name}}?</p>
-
-<div class="flex gap-2">
-<button @click="deleteContact"
-class="bg-red-500 flex-1 p-2 rounded">Delete</button>
-
-<button @click="selectedContact=null"
-class="bg-gray-600 flex-1 p-2 rounded">Cancel</button>
-</div>
-
-</div>
-</div>
-
-<!-- DELETE CHAT -->
+<!-- DELETE CHAT + PIN -->
 <div v-if="selectedChat"
 class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
@@ -229,44 +166,24 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
 Delete chat with {{selectedChat.friend_name}}?
 </p>
 
-<div class="flex gap-2">
+<div class="flex gap-2 flex-col">
+
+<button @click="pinChat(true)"
+class="bg-yellow-500 p-2 rounded">
+📌 Pin Chat
+</button>
+
 <button @click="deleteChat"
-class="bg-red-500 flex-1 p-2 rounded">
+class="bg-red-500 p-2 rounded">
 Delete
 </button>
 
 <button @click="selectedChat=null"
-class="bg-gray-600 flex-1 p-2 rounded">
+class="bg-gray-600 p-2 rounded">
 Cancel
 </button>
-</div>
 
 </div>
-</div>
-
-<!-- START CHAT -->
-<div v-if="showSelectChat"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-80 max-h-[400px] overflow-auto">
-
-<h2 class="mb-3">Start Chat</h2>
-
-<div v-for="c in contacts"
-     @click="startChat(c)"
-     class="flex items-center gap-3 p-2 rounded hover:bg-white/10 cursor-pointer">
-
-  <img src="https://i.pravatar.cc/40"
-       class="w-8 h-8 rounded-full">
-
-  <p>{{c.name}}</p>
-
-</div>
-
-<button @click="showSelectChat=false"
-class="mt-3 w-full bg-gray-600 p-2 rounded">
-Close
-</button>
 
 </div>
 </div>
@@ -293,7 +210,6 @@ selectedContact:null,
 selectedChat:null,
 pressTimer:null,
 
-// 🔥 NEW
 onlineUsers:[],
 typingUsers:{},
 ws:null
@@ -306,6 +222,12 @@ filteredChats(){
     const name = (c.friend_name || (c.user1===this.user.email?c.user2:c.user1)).toLowerCase()
     return name.includes(this.search.toLowerCase())
   })
+},
+
+sortedChats(){
+  return [...this.filteredChats].sort((a,b)=>{
+    return (b.pinned||0) - (a.pinned||0)
+  })
 }
 },
 
@@ -314,7 +236,6 @@ this.user=JSON.parse(localStorage.getItem("user"))
 this.loadAll()
 setInterval(()=>this.loadAll(),2000)
 
-// 🔥 WS GLOBAL
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -326,17 +247,26 @@ this.ws.onopen = ()=>{
   }))
 }
 
+// 🔥 HEARTBEAT FIX
+setInterval(()=>{
+  if(this.ws && this.ws.readyState===1){
+    this.ws.send(JSON.stringify({
+      type:"online",
+      user:this.user.email
+    }))
+  }
+},3000)
+
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
   if(msg.type==="online"){
-    if(!this.onlineUsers.includes(msg.user)){
-      this.onlineUsers.push(msg.user)
-    }
+    this.onlineUsers = this.onlineUsers.filter(u=>u!==msg.user)
+    this.onlineUsers.push(msg.user)
   }
 
   if(msg.type==="typing"){
-    this.typingUsers[msg.sender]=true
+    this.typingUsers[msg.sender]=msg.name || msg.sender
 
     setTimeout(()=>{
       delete this.typingUsers[msg.sender]
@@ -375,11 +305,25 @@ body:JSON.stringify({
 c.unread = 0
 
 localStorage.setItem("activeChat", JSON.stringify({
-  email: c.friend_email,
+  email: email,
   name: c.friend_name
 }))
 
 window.location.href="chat.html"
+},
+
+async pinChat(val){
+await fetch(API+"/pin-chat",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user1:this.user.email,
+user2:this.selectedChat.friend_email,
+pinned:val
+})
+})
+this.selectedChat=null
+this.loadAll()
 },
 
 startChat(c){
@@ -410,47 +354,6 @@ user2:this.selectedChat.friend_email
 })
 })
 this.selectedChat=null
-this.loadAll()
-},
-
-async sendRequest(){
-await fetch(API+"/send-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-from_email:this.user.email,
-to_email:this.friendEmail
-})
-})
-this.showModal=false
-this.loadAll()
-},
-
-async respond(id,action){
-await fetch(API+"/respond-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({id,action})
-})
-this.loadAll()
-},
-
-startPress(c){
-this.pressTimer=setTimeout(()=>{
-this.selectedContact=c
-},600)
-},
-
-async deleteContact(){
-await fetch(API+"/delete-contact",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-user_email:this.user.email,
-friend_email:this.selectedContact.email
-})
-})
-this.selectedContact=null
 this.loadAll()
 }
 

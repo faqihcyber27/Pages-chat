@@ -1,226 +1,59 @@
+<!-- SIMPAN sebagai index.html -->
 <!DOCTYPE html>
 <html>
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://cdn.tailwindcss.com"></script>
+<meta charset="UTF-8">
+<title>Login</title>
+
 <script src="https://unpkg.com/vue@3"></script>
+<script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="bg-black text-white">
+<body class="bg-black flex items-center justify-center h-screen">
 
-<div id="app" class="h-screen">
+<div id="app" class="bg-white/10 p-6 rounded-xl text-white w-80">
 
-<!-- ================= LOGIN ================= -->
-<div v-if="!token" class="h-full flex items-center justify-center">
+<h2 class="text-center mb-4">{{ isLogin ? 'Login' : 'Register' }}</h2>
 
-<div class="bg-gray-900 p-6 rounded-xl w-full max-w-sm">
+<input v-if="!isLogin" v-model="name" placeholder="Nama" class="w-full mb-2 p-2 rounded">
+<input v-model="email" placeholder="Email" class="w-full mb-2 p-2 rounded">
+<input type="password" v-model="password" placeholder="Password" class="w-full mb-2 p-2 rounded">
 
-<h2 class="text-center text-xl mb-4">
-{{ isLogin ? 'Login' : 'Register' }}
-</h2>
-
-<input v-model="email" placeholder="Email"
-class="w-full p-3 mb-3 bg-gray-800 rounded">
-
-<input v-model="password" type="password" placeholder="Password"
-class="w-full p-3 mb-3 bg-gray-800 rounded">
-
-<input v-if="!isLogin" v-model="name" placeholder="Name"
-class="w-full p-3 mb-3 bg-gray-800 rounded">
-
-<button @click="submit"
-class="w-full bg-blue-500 p-3 rounded">
+<button @click="submit" class="bg-green-500 w-full p-2 rounded">
 {{ isLogin ? 'Login' : 'Register' }}
 </button>
 
-<div class="text-center mt-3">
-<button @click="isLogin=!isLogin" class="text-blue-400">
-Switch
-</button>
-</div>
-
-</div>
-</div>
-
-<!-- ================= CHAT ================= -->
-<div v-else class="h-full flex flex-col bg-gray-100 text-black">
-
-<div class="bg-blue-500 text-white p-3 flex justify-between">
-<span>{{ user?.name }}</span>
-<button @click="logout">Logout</button>
-</div>
-
-<div ref="box" class="flex-1 overflow-auto p-2">
-
-<div v-for="m in chat"
-:class="m.me ? 'text-right' : ''">
-
-<div class="inline-block bg-white p-2 m-1 rounded">
-<b>{{ m.user }}</b><br>
-{{ m.msg }}
-</div>
-
-</div>
-
-</div>
-
-<div v-if="typing" class="text-xs px-2">
-{{ typing }} mengetik...
-</div>
-
-<div class="flex p-2 gap-2 bg-white">
-
-<input v-model="msg"
-@input="sendTyping"
-@keydown.enter="send"
-class="flex-1 border p-2 rounded">
-
-<button @click="send"
-class="bg-blue-500 text-white px-4 rounded">
-Send
-</button>
-
-</div>
-
-</div>
+<p class="text-center mt-3">
+<a href="#" @click="isLogin=!isLogin">
+{{ isLogin ? 'Register' : 'Login' }}
+</a>
+</p>
 
 </div>
 
 <script>
-const { createApp } = Vue;
+const API = "https://worker-chat.jihadwajib68.workers.dev"
 
-createApp({
-data(){
-return{
-isLogin:true,
-email:"",
-password:"",
-name:"",
-token:localStorage.getItem("token"),
-ws:null,
-msg:"",
-chat:[],
-user:null,
-typing:""
-}
-},
-
-async mounted(){
-if(this.token){
-  await this.loadUser();
-  this.connectWS();
-}
-},
-
-methods:{
-
-async submit(){
-
-const url = this.isLogin ? "/login" : "/register";
-
-const res = await fetch("https://chat-realtime.jihadwajib68.workers.dev"+url,{
-  method:"POST",
-  headers:{
-    "Content-Type":"application/json"
+Vue.createApp({
+  data() {
+    return { isLogin: true, name:'', email:'', password:'' }
   },
-  body:JSON.stringify({
-    email:this.email,
-    password:this.password,
-    name:this.name
-  })
-});
+  methods:{
+    async submit(){
+      const res = await fetch(API + (this.isLogin?"/login":"/register"), {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify(this)
+      })
+      const data = await res.json()
 
-if(this.isLogin){
-  if(!res.ok){
-    alert("Login gagal");
-    return;
+      if(data.token){
+        localStorage.setItem("user", JSON.stringify(data.user))
+        location.href="chat.html"
+      } else alert(data.error)
+    }
   }
-
-  const data = await res.json();
-
-  localStorage.setItem("token",data.token);
-  this.token = data.token;
-
-  await this.loadUser();
-  this.connectWS();
-
-}else{
-  if(res.ok){
-    alert("Register sukses");
-    this.isLogin=true;
-  }else{
-    alert("Register gagal");
-  }
-}
-
-},
-
-logout(){
-localStorage.removeItem("token");
-location.reload();
-},
-
-async loadUser(){
-const res = await fetch(
-"https://chat-realtime.jihadwajib68.workers.dev/me",
-{
-  headers:{Authorization:this.token}
-});
-
-this.user = await res.json();
-},
-
-connectWS(){
-
-this.ws = new WebSocket(
-"wss://chat-realtime.jihadwajib68.workers.dev?token="+this.token
-);
-
-this.ws.onmessage=(e)=>{
-const d = JSON.parse(e.data);
-
-if(d.type==="typing"){
-this.typing = d.user;
-setTimeout(()=>this.typing="",1000);
-return;
-}
-
-this.chat.push({...d,me:false});
-this.scroll();
-};
-},
-
-send(){
-if(!this.msg) return;
-
-const payload={
-type:"message",
-msg:this.msg
-};
-
-this.ws.send(JSON.stringify(payload));
-
-this.chat.push({
-...payload,
-user:this.user.name,
-me:true
-});
-
-this.msg="";
-},
-
-sendTyping(){
-this.ws.send(JSON.stringify({type:"typing"}));
-},
-
-scroll(){
-this.$nextTick(()=>{
-this.$refs.box.scrollTop=this.$refs.box.scrollHeight;
-});
-}
-
-}
-}).mount("#app");
+}).mount("#app")
 </script>
 
 </body>

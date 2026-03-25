@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Chat</title>
+
+<script src="https://unpkg.com/vue@3"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-black text-white">
+
+<div id="app" class="h-screen flex flex-col">
+
+<div class="p-3 bg-green-600">Realtime Chat</div>
+
+<div class="flex-1 overflow-auto p-2">
+  <div v-for="m in messages">
+    <b>{{m.user}}:</b> {{m.text}}
+  </div>
+</div>
+
+<div class="p-2 flex">
+  <input v-model="text" class="flex-1 p-2 text-black">
+  <button @click="send" class="bg-green-500 px-3">Send</button>
+</div>
+
+</div>
+
+<script>
+const API = "https://worker-chat.jihadwajib68.workers.dev"
+
+Vue.createApp({
+  data(){
+    return { text:'', messages:[], ws:null, user:{} }
+  },
+  async mounted(){
+    this.user = JSON.parse(localStorage.getItem("user"))
+
+    // load history
+    const res = await fetch(API+"/messages")
+    this.messages = await res.json()
+
+    // connect WS
+    this.ws = new WebSocket(API.replace("https","wss")+"/ws")
+
+    this.ws.onmessage = (e)=>{
+      this.messages.push(JSON.parse(e.data))
+    }
+  },
+  methods:{
+    send(){
+      this.ws.send(JSON.stringify({
+        user:this.user.name,
+        text:this.text
+      }))
+      this.text=""
+    }
+  }
+}).mount("#app")
+</script>
+
+</body>
+</html>

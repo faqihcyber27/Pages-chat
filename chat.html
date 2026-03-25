@@ -31,7 +31,11 @@ body {
 
   <div>
     <p class="font-semibold">{{chat.name || chat.email}}</p>
-    <p class="text-xs opacity-70">online</p>
+
+    <!-- 🔥 ONLINE STATUS -->
+    <p class="text-xs opacity-70">
+      {{ onlineUsers.includes(chat.email) ? 'online' : 'offline' }}
+    </p>
   </div>
 </div>
 
@@ -54,10 +58,17 @@ body {
 
 </div>
 
+<!-- 🔥 TYPING INDICATOR -->
+<div v-if="typingUser"
+class="text-xs opacity-60 px-3 pb-2">
+  {{typingUser}} is typing...
+</div>
+
 <!-- INPUT -->
 <div class="p-3 flex gap-2 bg-black/40">
 
   <input v-model="text"
+         @input="sendTyping"
          @keyup.enter="send"
          placeholder="Type message..."
          class="flex-1 px-4 py-2 rounded-full bg-white/10 outline-none">
@@ -87,7 +98,11 @@ text:'',
 ws:null,
 room:'',
 isConnected:false,
-lastCount:0
+lastCount:0,
+
+// 🔥 NEW
+typingUser:'',
+onlineUsers:[]
 }
 },
 
@@ -101,39 +116,63 @@ if(!this.chat || !this.chat.email){
   return
 }
 
-// 🔥 ROOM WAJIB SAMA
+// ROOM
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
-// ===== LOAD HISTORY
+// LOAD HISTORY
 await this.syncMessages(true)
 
-// ===== CONNECT WS
+// CONNECT WS
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
 
 this.ws.onopen = () => {
   this.isConnected = true
+
+  // 🔥 ONLINE SIGNAL
+  this.ws.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
 }
 
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // skip pesan sendiri
-  if(msg.sender === this.user.email) return
+  // ===== MESSAGE =====
+  if(msg.type === "message" || !msg.type){
 
-  // 🔥 anti duplicate
-  const last = this.messages[this.messages.length - 1]
-  if(!last || last.text !== msg.text){
-    this.messages.push(msg)
+    if(msg.sender === this.user.email) return
+
+    const last = this.messages[this.messages.length - 1]
+    if(!last || last.text !== msg.text){
+      this.messages.push(msg)
+    }
+
+    requestAnimationFrame(()=>{
+      this.scrollBottom()
+    })
   }
 
-  requestAnimationFrame(()=>{
-    this.scrollBottom()
-  })
+  // ===== TYPING =====
+  if(msg.type === "typing" && msg.sender !== this.user.email){
+    this.typingUser = msg.sender
+
+    setTimeout(()=>{
+      this.typingUser = ''
+    },1500)
+  }
+
+  // ===== ONLINE =====
+  if(msg.type === "online"){
+    if(!this.onlineUsers.includes(msg.user)){
+      this.onlineUsers.push(msg.user)
+    }
+  }
 }
 
-// 🔥 HYBRID FIX (ANTI DELAY)
+// HYBRID FIX
 setInterval(()=>{
   if(!document.hidden){
     this.syncMessages()
@@ -144,7 +183,17 @@ setInterval(()=>{
 
 methods:{
 
-// 🔥 SYNC MESSAGE (FIX DELAY)
+// 🔥 TYPING SEND
+sendTyping(){
+if(this.ws && this.ws.readyState===1){
+  this.ws.send(JSON.stringify({
+    type:"typing",
+    sender:this.user.email
+  }))
+}
+},
+
+// SYNC MESSAGE
 async syncMessages(force=false){
   const res = await fetch(API + "/messages?room=" + this.room)
   const data = await res.json()
@@ -170,9 +219,10 @@ this.messages.push({
   text:this.text
 })
 
-// kirim WS (kalau ready)
+// kirim WS
 if(this.isConnected){
   this.ws.send(JSON.stringify({
+    type:"message",
     room:this.room,
     sender:this.user.email,
     text:this.text

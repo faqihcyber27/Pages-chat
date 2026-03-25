@@ -44,7 +44,7 @@ body {
        :class="m.sender===user.email ? 'flex justify-end' : 'flex'">
 
     <div :class="[
-      'px-4 py-2 rounded-2xl max-w-[70%] transition-all duration-200',
+      'px-4 py-2 rounded-2xl max-w-[70%]',
       m.sender===user.email ? 'me' : 'them'
     ]">
       {{m.text}}
@@ -86,7 +86,8 @@ messages:[],
 text:'',
 ws:null,
 room:'',
-isConnected:false
+isConnected:false,
+lastCount:0
 }
 },
 
@@ -100,90 +101,85 @@ if(!this.chat || !this.chat.email){
   return
 }
 
-// 🔥 ROOM HARUS SAMA DI SEMUA USER
+// 🔥 ROOM WAJIB SAMA
 this.room = [this.user.email, this.chat.email].sort().join("_")
-console.log("ROOM:", this.room)
 
 // ===== LOAD HISTORY
-const res = await fetch(API + "/messages?room=" + this.room)
-const data = await res.json()
-
-// 🔥 anti duplicate
-this.messages = data.filter((v,i,a)=>
-  i===a.findIndex(t=>t.id===v.id)
-)
-
-this.scrollBottom(true)
+await this.syncMessages(true)
 
 // ===== CONNECT WS
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
 
-this.ws.onopen = async () => {
-  console.log("WS CONNECTED ✅")
+this.ws.onopen = () => {
   this.isConnected = true
-
-  // 🔥 refresh kecil biar sinkron (anti delay user lain)
-  setTimeout(async ()=>{
-    const res = await fetch(API + "/messages?room=" + this.room)
-    this.messages = await res.json()
-    this.scrollBottom(true)
-  },200)
 }
 
-this.ws.onerror = (e) => {
-  console.log("WS ERROR ❌", e)
-}
-
-this.ws.onclose = () => {
-  console.log("WS CLOSED ❌")
-}
-
-// 🔥 FIX ANTI DELAY
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // ❗ skip pesan sendiri
+  // skip pesan sendiri
   if(msg.sender === this.user.email) return
 
-  // 🔥 push langsung (lebih cepat dari spread)
-  this.messages.push(msg)
+  // 🔥 anti duplicate
+  const last = this.messages[this.messages.length - 1]
+  if(!last || last.text !== msg.text){
+    this.messages.push(msg)
+  }
 
-  // 🔥 paksa render cepat
-  this.$forceUpdate?.()
-
-  // 🔥 scroll smooth
   requestAnimationFrame(()=>{
     this.scrollBottom()
   })
 }
 
+// 🔥 HYBRID FIX (ANTI DELAY)
+setInterval(()=>{
+  if(!document.hidden){
+    this.syncMessages()
+  }
+},1000)
+
 },
 
 methods:{
 
+// 🔥 SYNC MESSAGE (FIX DELAY)
+async syncMessages(force=false){
+  const res = await fetch(API + "/messages?room=" + this.room)
+  const data = await res.json()
+
+  const lastLocal = this.messages[this.messages.length - 1]
+  const lastServer = data[data.length - 1]
+
+  if(force || !lastLocal || !lastServer || lastLocal.text !== lastServer.text){
+    this.messages = data
+    this.lastCount = data.length
+
+    this.scrollBottom(true)
+  }
+},
+
 send(){
 
-if(!this.text || !this.isConnected){
-  console.log("WS belum connect ❌")
-  return
-}
+if(!this.text) return
 
-// 🔥 tampil langsung (optimistic)
+// tampil langsung
 this.messages.push({
   sender:this.user.email,
-  text:this.text,
-  local:true
+  text:this.text
 })
 
-this.ws.send(JSON.stringify({
-  room:this.room,
-  sender:this.user.email,
-  text:this.text
-}))
+// kirim WS (kalau ready)
+if(this.isConnected){
+  this.ws.send(JSON.stringify({
+    room:this.room,
+    sender:this.user.email,
+    text:this.text
+  }))
+}
 
-this.text = ""
+this.text=""
 this.scrollBottom()
 },
 
@@ -197,7 +193,7 @@ this.$nextTick(()=>{
   if(isNearBottom || force){
     el.scrollTo({
       top: el.scrollHeight,
-      behavior: "smooth"
+      behavior:"smooth"
     })
   }
 })

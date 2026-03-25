@@ -37,7 +37,7 @@ body {
        class="w-9 h-9 rounded-full">
 
   <div>
-    <p class="font-semibold">{{chat.name}}</p>
+    <p class="font-semibold">{{chat.name || chat.email}}</p>
     <p class="text-xs opacity-70">online</p>
   </div>
 
@@ -47,11 +47,12 @@ body {
 <div ref="chatBox"
      class="flex-1 overflow-auto p-3 space-y-2">
 
-  <div v-for="m in messages"
+  <div v-for="(m,i) in messages"
+       :key="i"
        :class="m.sender===user.email ? 'flex justify-end' : 'flex'">
 
     <div :class="[
-      'px-4 py-2 rounded-2xl max-w-[70%]',
+      'px-4 py-2 rounded-2xl max-w-[70%] transition-all duration-200',
       m.sender===user.email ? 'me' : 'them'
     ]">
 
@@ -67,6 +68,7 @@ body {
 <div class="p-3 flex gap-2 bg-black/40">
 
   <input v-model="text"
+         @keyup.enter="send"
          placeholder="Type message..."
          class="flex-1 px-4 py-2 rounded-full bg-white/10 outline-none">
 
@@ -93,32 +95,56 @@ chat:{},
 messages:[],
 text:'',
 ws:null,
-room:''
+room:'',
+isConnected:false
 }
 },
 
 async mounted(){
 
-// ambil user & target chat
 this.user = JSON.parse(localStorage.getItem("user"))
 this.chat = JSON.parse(localStorage.getItem("activeChat"))
 
-// 🔥 generate room id (HARUS SORT)
-this.room = [this.user.email, this.chat.email].sort().join("_")
+if(!this.chat || !this.chat.email){
+  alert("Chat tidak valid")
+  return
+}
 
-// ===== LOAD HISTORY =====
+// 🔥 ROOM CONSISTENT
+this.room = [this.user.email, this.chat.email].sort().join("_")
+console.log("ROOM:", this.room)
+
+// ===== LOAD HISTORY
 const res = await fetch(API + "/messages?room=" + this.room)
 this.messages = await res.json()
 
-this.scrollBottom()
+this.scrollBottom(true)
 
-// ===== CONNECT WS =====
+// ===== CONNECT WS (FIXED)
 this.ws = new WebSocket(
-  API.replace("https","wss") + "/ws?room=" + this.room
+  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
 
+// ===== EVENTS
+this.ws.onopen = () => {
+  console.log("WS CONNECTED ✅")
+  this.isConnected = true
+}
+
+this.ws.onerror = (e) => {
+  console.log("WS ERROR ❌", e)
+}
+
+this.ws.onclose = () => {
+  console.log("WS CLOSED ❌")
+}
+
 this.ws.onmessage = (e)=>{
-  this.messages.push(JSON.parse(e.data))
+  const msg = JSON.parse(e.data)
+
+  console.log("RECEIVED:", msg)
+
+  this.messages = [...this.messages, msg]
   this.scrollBottom()
 }
 
@@ -127,7 +153,18 @@ this.ws.onmessage = (e)=>{
 methods:{
 
 send(){
-if(!this.text) return
+
+// ❌ JANGAN KIRIM JIKA WS BELUM CONNECT
+if(!this.text || !this.isConnected){
+  console.log("WS belum connect ❌")
+  return
+}
+
+// ✅ tampilkan langsung (optimistic UI)
+this.messages.push({
+  sender:this.user.email,
+  text:this.text
+})
 
 this.ws.send(JSON.stringify({
   room:this.room,
@@ -136,12 +173,22 @@ this.ws.send(JSON.stringify({
 }))
 
 this.text = ""
+this.scrollBottom()
 },
 
-scrollBottom(){
+scrollBottom(force=false){
 this.$nextTick(()=>{
   const el = this.$refs.chatBox
-  el.scrollTop = el.scrollHeight
+
+  const isNearBottom =
+    el.scrollHeight - el.scrollTop - el.clientHeight < 100
+
+  if(isNearBottom || force){
+    el.scrollTo({
+      top: el.scrollHeight,
+      behavior: "smooth"
+    })
+  }
 })
 }
 

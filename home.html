@@ -73,16 +73,15 @@ body {background:#020617;color:white;}
             <span v-if="onlineUsers.includes(c.friend_email || (c.user1===user.email?c.user2:c.user1))"
               class="w-2 h-2 bg-green-400 rounded-full"></span>
 
-            <!-- 📌 PIN -->
             <span v-if="c.pinned" class="text-yellow-400 text-xs">📌</span>
           </p>
 
           <!-- MESSAGE / TYPING -->
           <p class="text-sm truncate max-w-[180px]"
-             :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-50'">
+             :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-50'">
 
-            <span v-if="typingUsers[c.friend_email]">
-              {{ typingUsers[c.friend_email] }} is typing...
+            <span v-if="typingUsers[getFriendEmail(c)]">
+              {{ typingUsers[getFriendEmail(c)] }} is typing...
             </span>
 
             <span v-else>
@@ -247,7 +246,7 @@ this.ws.onopen = ()=>{
   }))
 }
 
-// 🔥 HEARTBEAT FIX
+// 🔥 HEARTBEAT
 setInterval(()=>{
   if(this.ws && this.ws.readyState===1){
     this.ws.send(JSON.stringify({
@@ -266,7 +265,8 @@ this.ws.onmessage = (e)=>{
   }
 
   if(msg.type==="typing"){
-    this.typingUsers[msg.sender]=msg.name || msg.sender
+    // 🔥 FIX mapping ke friend
+    this.typingUsers[msg.sender] = msg.name || msg.sender
 
     setTimeout(()=>{
       delete this.typingUsers[msg.sender]
@@ -277,6 +277,10 @@ this.ws.onmessage = (e)=>{
 },
 
 methods:{
+
+getFriendEmail(c){
+  return c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
+},
 
 async loadAll(){
 this.contacts=await (await fetch(API+"/contacts?email="+this.user.email)).json()
@@ -290,7 +294,7 @@ return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
 
 openChat(c){
 
-const email = c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
+const email = this.getFriendEmail(c)
 const room = [this.user.email, email].sort().join("_")
 
 fetch(API+"/mark-read",{

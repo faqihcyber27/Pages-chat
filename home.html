@@ -69,12 +69,6 @@ body {background:#020617;color:white;}
           <!-- 🔥 NAME + ONLINE -->
           <p class="font-semibold flex items-center gap-2">
 
-          <!-- 🔥 TYPING DI NAMA -->
-          <span v-if="typingUsers[getFriendEmail(c)]"
-          class="text-green-400">
-          {{ typingUsers[getFriendEmail(c)] }} sedang mengetik...
-          </span>
-
           <!-- NORMAL -->
           <span v-else>
           {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}

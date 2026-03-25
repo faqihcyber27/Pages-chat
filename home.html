@@ -32,46 +32,40 @@ body {
 
 <!-- HEADER -->
 <div class="header p-5 rounded-b-3xl">
-<h1 class="text-lg">Hi, {{user.name}}</h1>
+<h1>Hi, {{user.name}}</h1>
 <p class="text-sm opacity-70">Your Messages</p>
 </div>
 
 <!-- CONTENT -->
 <div class="flex-1 overflow-auto p-4">
 
-  <!-- EMPTY STATE -->
-  <div v-if="contacts.length === 0"
+  <!-- EMPTY -->
+  <div v-if="contacts.length===0"
        class="h-full flex flex-col items-center justify-center text-center">
 
     <div class="text-5xl mb-4">💬</div>
+    <h2>No Chats Yet</h2>
+    <p class="text-sm opacity-60 mb-4">Add friend to start chatting</p>
 
-    <h2 class="text-lg mb-2">No Chats Yet</h2>
-
-    <p class="text-sm opacity-60 mb-4">
-      Start conversation with your friends
-    </p>
-
-    <button class="bg-purple-600 px-4 py-2 rounded-full neon">
+    <button @click="showModal=true"
+      class="bg-purple-600 px-4 py-2 rounded-full neon">
       + Add Friend
     </button>
-
   </div>
 
-  <!-- CHAT LIST -->
+  <!-- LIST -->
   <div v-else class="space-y-3">
 
     <div v-for="c in contacts"
          @click="openChat(c)"
-         class="glass p-3 rounded-xl flex items-center gap-3 cursor-pointer">
+         class="glass p-3 rounded-xl flex items-center gap-3">
 
-      <img :src="c.avatar" class="w-10 h-10 rounded-full">
+      <img src="https://i.pravatar.cc/40" class="w-10 h-10 rounded-full">
 
       <div class="flex-1">
         <p>{{c.name}}</p>
-        <p class="text-xs opacity-50">Last message...</p>
+        <p class="text-xs opacity-50">{{c.email}}</p>
       </div>
-
-      <div class="text-xs opacity-40">now</div>
 
     </div>
 
@@ -79,20 +73,80 @@ body {
 
 </div>
 
+<!-- FLOAT BUTTON -->
+<button @click="showModal=true"
+class="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-purple-600 neon text-2xl">
++
+</button>
+
+<!-- MODAL -->
+<div v-if="showModal"
+class="fixed inset-0 bg-black/60 flex items-center justify-center">
+
+<div class="glass p-5 rounded-xl w-80">
+
+<h2 class="mb-3">Add Friend</h2>
+
+<input v-model="friendEmail"
+placeholder="Email teman"
+class="w-full p-2 mb-3 rounded bg-white/10">
+
+<div class="flex justify-end gap-2">
+<button @click="showModal=false">Cancel</button>
+<button @click="addFriend"
+class="bg-purple-600 px-3 py-1 rounded">
+Add
+</button>
+</div>
+
+</div>
+</div>
+
 </div>
 
 <script>
+const API="https://worker-chat.jihadwajib68.workers.dev"
+
 Vue.createApp({
 data(){
 return{
 user:{},
-contacts:[] // kosong default
+contacts:[],
+showModal:false,
+friendEmail:''
 }
 },
-mounted(){
-this.user=JSON.parse(localStorage.getItem("user")) || {name:"Guest"}
+
+async mounted(){
+this.user=JSON.parse(localStorage.getItem("user"))||{}
+await this.loadContacts()
 },
+
 methods:{
+async loadContacts(){
+const res=await fetch(API+"/contacts?email="+this.user.email)
+this.contacts=await res.json()
+},
+
+async addFriend(){
+const res=await fetch(API+"/add-friend",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user_email:this.user.email,
+friend_email:this.friendEmail
+})
+})
+
+const d=await res.json()
+
+if(d.success){
+this.friendEmail=''
+this.showModal=false
+this.loadContacts()
+}else alert(d.error)
+},
+
 openChat(c){
 localStorage.setItem("activeChat",JSON.stringify(c))
 location.href="chat.html"

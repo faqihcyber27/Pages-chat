@@ -194,6 +194,7 @@ this.ws.onmessage = (e)=>{
     if(msg.sender === this.user.email) return
 
     // 🔥 FIX DUPLICATE + SUPPORT FILE
+    const last = this.messages[this.messages.length - 1]
     if(!last || (last.text !== msg.text && last.file !== msg.file)){
     this.messages.push(msg)
   }
@@ -283,7 +284,7 @@ async syncMessages(force=false){
   const lastLocal = this.messages[this.messages.length - 1]
   const lastServer = data[data.length - 1]
 
-  if(force || !lastLocal || !lastServer || lastLocal.text !== lastServer.text){
+  if(force || !lastLocal || !lastServer || lastLocal.text !== lastServer.text || lastLocal.file !== lastServer.file){
     this.messages = data
     this.lastCount = data.length
 

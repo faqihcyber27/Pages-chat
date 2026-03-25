@@ -41,46 +41,38 @@ body {background:#020617;color:white;}
   <!-- ===== CHATS ===== -->
   <div v-if="tab==='chats'">
 
-    <div class="text-3xl mb-4">💬</div>
+    <div class="text-3xl mb-2">💬</div>
 
-    <div v-if="chats.length===0" class="text-center mt-20 opacity-60">
+    <!-- 🔍 SEARCH -->
+    <input v-model="search"
+      placeholder="Search..."
+      class="w-full p-2 mb-3 bg-white/10 rounded">
+
+    <div v-if="filteredChats.length===0" class="text-center mt-20 opacity-60">
       No chats yet
     </div>
 
     <!-- CHAT LIST -->
-    <div v-for="c in chats"
+    <div v-for="c in filteredChats"
          @click="openChat(c)"
          @touchstart="startChatPress(c)"
          @touchend="cancelPress"
          class="glass p-4 mb-3 rounded-xl flex justify-between items-center cursor-pointer">
 
-      <!-- LEFT -->
       <div class="flex items-center gap-3">
-
         <img src="https://i.pravatar.cc/40"
              class="w-10 h-10 rounded-full">
 
         <div>
-          <div class="flex items-center gap-2">
-            <p class="font-semibold">
-              {{getName(c)}}
-            </p>
-
-            <!-- 🟢 ONLINE -->
-            <span v-if="onlineUsers[getEmail(c)]"
-                  class="w-2 h-2 bg-green-400 rounded-full"></span>
-          </div>
+          <p class="font-semibold">{{getName(c)}}</p>
 
           <p class="text-sm opacity-50 truncate max-w-[180px]">
             {{c.last_message}}
           </p>
         </div>
-
       </div>
 
-      <!-- RIGHT -->
       <div class="text-right">
-
         <p class="text-xs opacity-50">
           {{ formatTime(c.updated_at) }}
         </p>
@@ -92,7 +84,6 @@ body {background:#020617;color:white;}
         </div>
 
       </div>
-
     </div>
 
   </div>
@@ -120,7 +111,6 @@ body {background:#020617;color:white;}
            class="w-10 h-10 rounded-full">
 
       <p class="font-medium">{{c.name}}</p>
-
     </div>
 
   </div>
@@ -153,8 +143,8 @@ tab:'chats',
 contacts:[],
 chats:[],
 requests:[],
-unreadMap:{}, // 🔥 NEW
-onlineUsers:{}, // 🔥 NEW
+search:'',
+unreadMap:{},
 showModal:false,
 showRequests:false,
 showSelectChat:false,
@@ -165,31 +155,21 @@ pressTimer:null
 }
 },
 
+computed:{
+filteredChats(){
+  return this.chats
+    .filter(c=>{
+      const name = this.getName(c).toLowerCase()
+      return name.includes(this.search.toLowerCase())
+    })
+    .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
+}
+},
+
 async mounted(){
 this.user=JSON.parse(localStorage.getItem("user"))
 this.loadAll()
-
 setInterval(()=>this.loadAll(),2000)
-
-// 🔥 SET ONLINE DIRI SENDIRI
-setInterval(()=>{
-  localStorage.setItem("online_"+this.user.email, Date.now())
-},2000)
-
-// 🔥 CHECK ONLINE USER LAIN
-setInterval(()=>{
-  this.chats.forEach(c=>{
-    const email = this.getEmail(c)
-    const last = localStorage.getItem("online_"+email)
-
-    if(last && Date.now() - last < 5000){
-      this.onlineUsers[email] = true
-    }else{
-      this.onlineUsers[email] = false
-    }
-  })
-},2000)
-
 },
 
 methods:{
@@ -206,24 +186,20 @@ async loadAll(){
 this.contacts=await (await fetch(API+"/contacts?email="+this.user.email)).json()
 this.chats=await (await fetch(API+"/chats?email="+this.user.email)).json()
 this.requests=await (await fetch(API+"/requests?email="+this.user.email)).json()
-
 await this.calculateUnread()
 },
 
 async calculateUnread(){
   for(const c of this.chats){
-
     const email = this.getEmail(c)
     const room = [this.user.email, email].sort().join("_")
 
     const res = await fetch(API+"/messages?room="+room)
     const msgs = await res.json()
 
-    const unread = msgs.filter(m =>
+    this.unreadMap[email] = msgs.filter(m =>
       m.sender !== this.user.email && !m.is_read
     ).length
-
-    this.unreadMap[email] = unread
   }
 },
 
@@ -231,18 +207,21 @@ formatTime(t){
 return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
 },
 
-openChat(c){
+async openChat(c){
+
+// 🔥 MARK AS READ
+await fetch(API+"/mark-read",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+room:[this.user.email,this.getEmail(c)].sort().join("_"),
+user:this.user.email
+})
+})
+
 localStorage.setItem("activeChat", JSON.stringify({
   email: this.getEmail(c),
   name: this.getName(c)
-}))
-window.location.href="chat.html"
-},
-
-startChat(c){
-localStorage.setItem("activeChat", JSON.stringify({
-  email: c.email,
-  name: c.name
 }))
 window.location.href="chat.html"
 },
@@ -255,60 +234,6 @@ this.pressTimer=setTimeout(()=>{
 
 cancelPress(){
 clearTimeout(this.pressTimer)
-},
-
-async deleteChat(){
-await fetch(API+"/delete-chat",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-user1:this.user.email,
-user2:this.getEmail(this.selectedChat)
-})
-})
-this.selectedChat=null
-this.loadAll()
-},
-
-async sendRequest(){
-await fetch(API+"/send-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-from_email:this.user.email,
-to_email:this.friendEmail
-})
-})
-this.showModal=false
-this.loadAll()
-},
-
-async respond(id,action){
-await fetch(API+"/respond-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({id,action})
-})
-this.loadAll()
-},
-
-startPress(c){
-this.pressTimer=setTimeout(()=>{
-this.selectedContact=c
-},600)
-},
-
-async deleteContact(){
-await fetch(API+"/delete-contact",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-user_email:this.user.email,
-friend_email:this.selectedContact.email
-})
-})
-this.selectedContact=null
-this.loadAll()
 }
 
 }

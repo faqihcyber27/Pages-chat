@@ -78,9 +78,9 @@ body {background:#020617;color:white;}
           <p class="text-sm truncate max-w-[180px]"
              :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-50'">
 
-           <span v-if="typingUsers[getFriendEmail(c)]">
-  {{ typingUsers[getFriendEmail(c)] }} is typing...
-</span>
+            <span v-if="typingUsers[c.friend_email]">
+              typing...
+            </span>
 
             <span v-else>
               {{c.last_message}}
@@ -326,15 +326,6 @@ this.ws.onopen = ()=>{
   }))
 }
 
-setInterval(()=>{
-  if(this.ws && this.ws.readyState===1){
-    this.ws.send(JSON.stringify({
-      type:"online",
-      user:this.user.email
-    }))
-  }
-},3000)
-
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
@@ -345,7 +336,7 @@ this.ws.onmessage = (e)=>{
   }
 
   if(msg.type==="typing"){
-    this.typingUsers[msg.sender]=msg.name || msg.sender
+    this.typingUsers[msg.sender]=true
 
     setTimeout(()=>{
       delete this.typingUsers[msg.sender]
@@ -362,10 +353,6 @@ this.contacts=await (await fetch(API+"/contacts?email="+this.user.email)).json()
 this.chats=await (await fetch(API+"/chats?email="+this.user.email)).json()
 this.requests=await (await fetch(API+"/requests?email="+this.user.email)).json()
 },
-
-getFriendEmail(c){
-  return c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
-}
 
 formatTime(t){
 return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})

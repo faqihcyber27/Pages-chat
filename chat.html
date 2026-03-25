@@ -21,6 +21,15 @@ body {
 <body>
 
 <div id="app" class="h-screen flex flex-col">
+  
+<div v-if="previewImage"
+     class="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+     @click="previewImage=null">
+
+  <img :src="previewImage"
+       class="max-w-full max-h-full rounded-lg">
+
+</div>
 
 <!-- HEADER -->
 <div class="p-4 flex items-center gap-3 bg-purple-600">
@@ -55,8 +64,9 @@ body {
 
   <!-- IMAGE -->
   <img v-if="m.file_type && m.file_type.includes('image')"
-       :src="m.file"
-       class="rounded-lg max-w-[200px]">
+     :src="m.file"
+     @click="openImage(m.file)"
+     class="rounded-lg max-w-[200px] cursor-pointer hover:opacity-80">
 
   <!-- FILE -->
   <a v-else :href="m.file" download
@@ -130,6 +140,7 @@ user:{},
 chat:{},
 messages:[],
 text:'',
+previewImage:null,
 ws:null,
 room:'',
 isConnected:false,
@@ -233,6 +244,10 @@ methods:{
 
 toggleEmoji(){
   this.showEmoji = !this.showEmoji
+},
+
+openImage(src){
+  this.previewImage = src
 },
 
 addEmoji(e){

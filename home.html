@@ -135,11 +135,11 @@ body {background:#020617;color:white;}
 </button>
 
 <!-- BOTTOM NAV -->
-<div class="glass flex justify-around p-4 text-sm">
-  <button @click="tab='chats'" :class="tab==='chats'?'active':''">Chats</button>
-  <button @click="tab='contacts'" :class="tab==='contacts'?'active':''">Contacts</button>
+<div class="glass flex justify-around p-4 text-xl">
+  <button @click="tab='chats'" :class="tab==='chats'?'active':''">💬</button>
+  <button @click="tab='contacts'" :class="tab==='contacts'?'active':''">👤</button>
 </div>
-
+  
 <!-- ADD FRIEND -->
 <div v-if="showModal"
 class="fixed inset-0 bg-black/60 flex items-center justify-center">

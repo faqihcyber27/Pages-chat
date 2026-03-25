@@ -41,9 +41,9 @@ body {background:#020617;color:white;}
   <!-- ===== CHATS ===== -->
   <div v-if="tab==='chats'">
 
-    <div class="text-3xl mb-2">💬</div>
+    <div class="text-3xl mb-4">💬</div>
 
-    <!-- 🔍 SEARCH -->
+    <!-- 🔍 SEARCH (TAMBAHAN) -->
     <input v-model="search"
       placeholder="Search..."
       class="w-full p-2 mb-3 bg-white/10 rounded">
@@ -59,31 +59,39 @@ body {background:#020617;color:white;}
          @touchend="cancelPress"
          class="glass p-4 mb-3 rounded-xl flex justify-between items-center cursor-pointer">
 
+      <!-- LEFT -->
       <div class="flex items-center gap-3">
+
         <img src="https://i.pravatar.cc/40"
              class="w-10 h-10 rounded-full">
 
         <div>
-          <p class="font-semibold">{{getName(c)}}</p>
+          <p class="font-semibold">
+            {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
+          </p>
 
           <p class="text-sm opacity-50 truncate max-w-[180px]">
             {{c.last_message}}
           </p>
         </div>
+
       </div>
 
+      <!-- RIGHT -->
       <div class="text-right">
+
         <p class="text-xs opacity-50">
           {{ formatTime(c.updated_at) }}
         </p>
 
-        <!-- 🔴 UNREAD -->
+        <!-- 🔴 UNREAD FIX -->
         <div v-if="unreadMap[getEmail(c)] > 0"
              class="bg-red-500 text-xs px-2 py-1 rounded-full mt-1">
           {{ unreadMap[getEmail(c)] > 99 ? '99+' : unreadMap[getEmail(c)] }}
         </div>
 
       </div>
+
     </div>
 
   </div>
@@ -111,6 +119,7 @@ body {background:#020617;color:white;}
            class="w-10 h-10 rounded-full">
 
       <p class="font-medium">{{c.name}}</p>
+
     </div>
 
   </div>
@@ -130,6 +139,8 @@ body {background:#020617;color:white;}
   <button @click="tab='contacts'" :class="tab==='contacts'?'active':''">👤</button>
 </div>
 
+<!-- (SEMUA MODAL TETAP - TIDAK DIUBAH) -->
+
 </div>
 
 <script>
@@ -143,8 +154,8 @@ tab:'chats',
 contacts:[],
 chats:[],
 requests:[],
-search:'',
-unreadMap:{},
+search:'', // 🔥 NEW
+unreadMap:{}, // 🔥 NEW
 showModal:false,
 showRequests:false,
 showSelectChat:false,
@@ -157,12 +168,10 @@ pressTimer:null
 
 computed:{
 filteredChats(){
-  return this.chats
-    .filter(c=>{
-      const name = this.getName(c).toLowerCase()
-      return name.includes(this.search.toLowerCase())
-    })
-    .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
+  return this.chats.filter(c=>{
+    const name = (c.friend_name || (c.user1===this.user.email?c.user2:c.user1)).toLowerCase()
+    return name.includes(this.search.toLowerCase())
+  })
 }
 },
 
@@ -178,19 +187,17 @@ getEmail(c){
   return c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
 },
 
-getName(c){
-  return c.friend_name || this.getEmail(c)
-},
-
 async loadAll(){
 this.contacts=await (await fetch(API+"/contacts?email="+this.user.email)).json()
 this.chats=await (await fetch(API+"/chats?email="+this.user.email)).json()
 this.requests=await (await fetch(API+"/requests?email="+this.user.email)).json()
+
 await this.calculateUnread()
 },
 
 async calculateUnread(){
   for(const c of this.chats){
+
     const email = this.getEmail(c)
     const room = [this.user.email, email].sort().join("_")
 
@@ -221,7 +228,15 @@ user:this.user.email
 
 localStorage.setItem("activeChat", JSON.stringify({
   email: this.getEmail(c),
-  name: this.getName(c)
+  name: c.friend_name
+}))
+window.location.href="chat.html"
+},
+
+startChat(c){
+localStorage.setItem("activeChat", JSON.stringify({
+  email: c.email,
+  name: c.name
 }))
 window.location.href="chat.html"
 },
@@ -234,6 +249,60 @@ this.pressTimer=setTimeout(()=>{
 
 cancelPress(){
 clearTimeout(this.pressTimer)
+},
+
+async deleteChat(){
+await fetch(API+"/delete-chat",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user1:this.user.email,
+user2:this.selectedChat.friend_email
+})
+})
+this.selectedChat=null
+this.loadAll()
+},
+
+async sendRequest(){
+await fetch(API+"/send-request",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+from_email:this.user.email,
+to_email:this.friendEmail
+})
+})
+this.showModal=false
+this.loadAll()
+},
+
+async respond(id,action){
+await fetch(API+"/respond-request",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({id,action})
+})
+this.loadAll()
+},
+
+startPress(c){
+this.pressTimer=setTimeout(()=>{
+this.selectedContact=c
+},600)
+},
+
+async deleteContact(){
+await fetch(API+"/delete-contact",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+user_email:this.user.email,
+friend_email:this.selectedContact.email
+})
+})
+this.selectedContact=null
+this.loadAll()
 }
 
 }

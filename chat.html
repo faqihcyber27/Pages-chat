@@ -1,16 +1,26 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-body {background:#020617;color:white;}
-.header {background:linear-gradient(135deg,#7c3aed,#4f46e5);}
-.me {background:#7c3aed;}
-.them {background:rgba(255,255,255,0.08);}
+body {
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  color: white;
+}
+
+/* bubble */
+.me {
+  background: #7c3aed;
+}
+
+.them {
+  background: rgba(255,255,255,0.08);
+}
 </style>
 </head>
 
@@ -19,26 +29,33 @@ body {background:#020617;color:white;}
 <div id="app" class="h-screen flex flex-col">
 
 <!-- HEADER -->
-<div class="header p-4 flex items-center gap-3">
+<div class="p-4 flex items-center gap-3 bg-purple-600">
+
   <button onclick="history.back()">←</button>
+
+  <img src="https://i.pravatar.cc/40"
+       class="w-9 h-9 rounded-full">
+
   <div>
-    <p class="font-semibold">{{chat.email}}</p>
-    <p class="text-xs opacity-70">Online</p>
+    <p class="font-semibold">{{chat.name}}</p>
+    <p class="text-xs opacity-70">online</p>
   </div>
+
 </div>
 
 <!-- CHAT AREA -->
-<div ref="box" class="flex-1 overflow-auto p-3 space-y-2">
+<div ref="chatBox"
+     class="flex-1 overflow-auto p-3 space-y-2">
 
   <div v-for="m in messages"
-       :class="m.sender===user.email?'flex justify-end':'flex'">
+       :class="m.sender===user.email ? 'flex justify-end' : 'flex'">
 
     <div :class="[
       'px-4 py-2 rounded-2xl max-w-[70%]',
-      m.sender===user.email?'me':'them'
+      m.sender===user.email ? 'me' : 'them'
     ]">
 
-      <p class="text-sm">{{m.text}}</p>
+      {{m.text}}
 
     </div>
 
@@ -47,24 +64,26 @@ body {background:#020617;color:white;}
 </div>
 
 <!-- INPUT -->
-<div class="p-3 flex gap-2 bg-black/30">
+<div class="p-3 flex gap-2 bg-black/40">
 
   <input v-model="text"
-  @keyup.enter="send"
-  placeholder="Type message..."
-  class="flex-1 p-3 rounded-full text-black">
+         placeholder="Type message..."
+         class="flex-1 px-4 py-2 rounded-full bg-white/10 outline-none">
 
-  <button @click="send"
-  class="bg-purple-600 px-4 rounded-full">
-  ➤
+  <button v-if="text"
+          @click="send"
+          class="bg-purple-600 px-4 py-2 rounded-full">
+    ➤
   </button>
+
+  <button v-else class="text-xl">🎤</button>
 
 </div>
 
 </div>
 
 <script>
-const API="https://worker-chat.jihadwajib68.workers.dev"
+const API = "https://worker-chat.jihadwajib68.workers.dev"
 
 Vue.createApp({
 data(){
@@ -74,78 +93,60 @@ chat:{},
 messages:[],
 text:'',
 ws:null,
-room:'',
-isConnected:false
+room:''
 }
 },
 
 async mounted(){
 
+// ambil user & target chat
 this.user = JSON.parse(localStorage.getItem("user"))
 this.chat = JSON.parse(localStorage.getItem("activeChat"))
 
-if(!this.chat || !this.chat.email){
-  alert("Chat tidak valid")
-  return
-}
-
-// 🔥 ROOM FIX (WAJIB)
+// 🔥 generate room id (HARUS SORT)
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
-console.log("ROOM:", this.room)
-
-// ===== LOAD HISTORY
+// ===== LOAD HISTORY =====
 const res = await fetch(API + "/messages?room=" + this.room)
 this.messages = await res.json()
 
-this.scroll()
+this.scrollBottom()
 
-// ===== CONNECT WS
+// ===== CONNECT WS =====
 this.ws = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
+  API.replace("https","wss") + "/ws?room=" + this.room
 )
 
-this.ws.onopen = () => {
-  console.log("WS CONNECTED ✅")
-  this.isConnected = true
-}
-
-this.ws.onerror = (e) => {
-  console.log("WS ERROR ❌", e)
-}
-
-this.ws.onmessage = (e) => {
-  const msg = JSON.parse(e.data)
-  this.messages.push(msg)
-  this.scroll()
+this.ws.onmessage = (e)=>{
+  this.messages.push(JSON.parse(e.data))
+  this.scrollBottom()
 }
 
 },
 
 methods:{
-send(){
 
-// ❌ JANGAN KIRIM KALAU BELUM CONNECT
-if(!this.text || !this.isConnected){
-  console.log("WS belum connect")
-  return
-}
+send(){
+if(!this.text) return
 
 this.ws.send(JSON.stringify({
-room:this.room,
-sender:this.user.email,
-text:this.text
+  room:this.room,
+  sender:this.user.email,
+  text:this.text
 }))
 
-this.text=""
+this.text = ""
 },
 
-scroll(){
+scrollBottom(){
 this.$nextTick(()=>{
-this.$refs.box.scrollTop=this.$refs.box.scrollHeight
+  const el = this.$refs.chatBox
+  el.scrollTop = el.scrollHeight
 })
 }
+
 }
+
 }).mount("#app")
 </script>
 

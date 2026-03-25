@@ -1,9 +1,10 @@
+<!-- index.html -->
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Login</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Auth</title>
 
 <script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -19,6 +20,9 @@ body {
 .neon {
   box-shadow: 0 0 10px #3b82f6, 0 0 20px #3b82f6;
 }
+.input {
+  background: rgba(255,255,255,0.05);
+}
 </style>
 </head>
 
@@ -26,21 +30,23 @@ body {
 
 <div id="app" class="w-full max-w-sm px-4">
 
-<div class="glass p-6 rounded-xl">
+<div class="glass rounded-2xl p-6">
 
-<h2 class="text-center mb-4">{{ isLogin?'Login':'Register' }}</h2>
+<h2 class="text-center text-xl mb-4">
+{{ isLogin ? 'Welcome Back' : 'Create Account' }}
+</h2>
 
-<input v-if="!isLogin" v-model="name" placeholder="Name" class="w-full mb-2 p-2 rounded bg-white/10">
-<input v-model="email" placeholder="Email" class="w-full mb-2 p-2 rounded bg-white/10">
-<input type="password" v-model="password" placeholder="Password" class="w-full mb-2 p-2 rounded bg-white/10">
+<input v-if="!isLogin" v-model="name" placeholder="Name" class="input w-full mb-3 px-4 py-2 rounded-lg">
+<input v-model="email" placeholder="Email" class="input w-full mb-3 px-4 py-2 rounded-lg">
+<input type="password" v-model="password" placeholder="Password" class="input w-full mb-4 px-4 py-2 rounded-lg">
 
-<button @click="submit" class="bg-blue-500 w-full p-2 rounded neon">
-{{ isLogin?'Login':'Register' }}
+<button @click="submit" class="w-full py-2 bg-blue-500 rounded-lg neon">
+{{ isLogin ? 'Login' : 'Register' }}
 </button>
 
-<p class="text-center mt-3">
+<p class="text-center mt-4 text-sm">
 <a href="#" @click="isLogin=!isLogin">
-{{ isLogin?'Register':'Login' }}
+{{ isLogin ? 'Register' : 'Login' }}
 </a>
 </p>
 
@@ -61,6 +67,7 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify(this)
 })
 const d=await res.json()
+
 if(d.token){
 localStorage.setItem("user",JSON.stringify(d.user))
 location.href="home.html"

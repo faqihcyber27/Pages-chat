@@ -314,7 +314,7 @@ const email = c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
 const room = [this.user.email, email].sort().join("_")
 
 // 🔥 TAMBAHAN: mark as read ke backend
-fetch(API+"/mark-read",{
+await fetch(API+"/mark-read",{
 method:"POST",
 headers:{"Content-Type":"application/json"},
 body:JSON.stringify({

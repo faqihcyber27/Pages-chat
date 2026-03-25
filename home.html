@@ -69,6 +69,12 @@ body {background:#020617;color:white;}
           <!-- 🔥 NAME + ONLINE -->
           <p class="font-semibold flex items-center gap-2">
 
+          <!-- 🔥 TYPING DI NAMA -->
+          <span v-if="typingUsers[getFriendEmail(c)]"
+          class="text-green-400">
+          {{ typingUsers[getFriendEmail(c)] }} sedang mengetik...
+          </span>
+
           <!-- NORMAL -->
           <span v-else>
           {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
@@ -91,18 +97,19 @@ body {background:#020617;color:white;}
             </span>
 
             <!-- 📷 FOTO HARUS DI ATAS -->
-            <span v-else-if="c.last_file_type && c.last_file_type.startsWith('image')">
+            <!-- 💬 TEXT -->
+            <span v-else-if="c.last_message">
+              {{c.last_message}}
+            </span>
+            
+            <!-- 📷 FOTO -->
+            <span v-else-if="c.last_file_type && c.last_file_type.includes('image')">
               📷 Foto
             </span>
 
             <!-- 📎 FILE -->
-            <span v-else-if="c.last_file_type">
+            <span v-else-if="c.last_file_type && !c.last_file_type.includes('image')">
               📎 File
-            </span>
-
-            <!-- 💬 TEXT -->
-            <span v-else-if="c.last_message">
-              {{c.last_message}}
             </span>
 
             <span v-else>
@@ -177,6 +184,7 @@ body {background:#020617;color:white;}
 </div>
 
 <!-- ADD FRIEND -->
+<!-- ADD FRIEND -->
 <div v-if="showModal"
 class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
@@ -188,10 +196,21 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
 placeholder="Email"
 class="w-full p-2 mb-3 bg-white/10 rounded">
 
-<button @click="sendRequest"
-class="bg-purple-600 w-full p-2 rounded">
-Send Request
-</button>
+<div class="flex gap-2">
+
+  <!-- SEND -->
+  <button @click="sendRequest"
+  class="bg-purple-600 flex-1 p-2 rounded">
+  Send
+  </button>
+
+  <!-- CLOSE -->
+  <button @click="showModal=false"
+  class="bg-gray-600 flex-1 p-2 rounded">
+  Close
+  </button>
+
+</div>
 
 </div>
 </div>

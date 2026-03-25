@@ -1,0 +1,60 @@
+<!-- SIMPAN sebagai index.html -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Login</title>
+
+<script src="https://unpkg.com/vue@3"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-black flex items-center justify-center h-screen">
+
+<div id="app" class="bg-white/10 p-6 rounded-xl text-white w-80">
+
+<h2 class="text-center mb-4">{{ isLogin ? 'Login' : 'Register' }}</h2>
+
+<input v-if="!isLogin" v-model="name" placeholder="Nama" class="w-full mb-2 p-2 rounded">
+<input v-model="email" placeholder="Email" class="w-full mb-2 p-2 rounded">
+<input type="password" v-model="password" placeholder="Password" class="w-full mb-2 p-2 rounded">
+
+<button @click="submit" class="bg-green-500 w-full p-2 rounded">
+{{ isLogin ? 'Login' : 'Register' }}
+</button>
+
+<p class="text-center mt-3">
+<a href="#" @click="isLogin=!isLogin">
+{{ isLogin ? 'Register' : 'Login' }}
+</a>
+</p>
+
+</div>
+
+<script>
+const API = "https://worker-chat.jihadwajib68.workers.dev"
+
+Vue.createApp({
+  data() {
+    return { isLogin: true, name:'', email:'', password:'' }
+  },
+  methods:{
+    async submit(){
+      const res = await fetch(API + (this.isLogin?"/login":"/register"), {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify(this)
+      })
+      const data = await res.json()
+
+      if(data.token){
+        localStorage.setItem("user", JSON.stringify(data.user))
+        location.href="chat.html"
+      } else alert(data.error)
+    }
+  }
+}).mount("#app")
+</script>
+
+</body>
+</html>

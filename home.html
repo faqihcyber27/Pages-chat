@@ -211,6 +211,53 @@ body {background:#020617;color:white;}
   overflow: hidden;
 }
 
+.contact-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255,255,255,0.08);
+
+  box-shadow:
+    0 8px 25px rgba(0,0,0,0.3),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+
+  transition: 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.contact-card:hover {
+  transform: scale(1.02);
+  box-shadow:
+    0 12px 30px rgba(0,0,0,0.4),
+    0 0 20px rgba(124,58,237,0.2);
+}
+
+.contact-card::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background: radial-gradient(circle, rgba(124,58,237,0.2), transparent 70%);
+  opacity:0;
+  transition:0.3s;
+}
+
+.contact-card:hover::before {
+  opacity:1;
+}
+
+.action-btn {
+  background: rgba(255,255,255,0.08);
+  padding: 6px 8px;
+  border-radius: 10px;
+  transition: 0.2s;
+}
+
+.action-btn:hover {
+  background: rgba(255,255,255,0.15);
+  transform: scale(1.1);
+}
+
 .active {color:#a78bfa;}
 </style>
 </head>
@@ -364,34 +411,109 @@ body {background:#020617;color:white;}
 
   <!-- ===== CONTACTS ===== -->
   <div v-if="tab==='contacts'">
-    <div class="text-xl font-semibold mb-3">Contacts</div>
-    <button @click="showModal=true"
-      class="bg-purple-600 px-4 py-2 rounded-lg mb-4 w-full">
-      + Add Friend
-    </button>
-    <div v-if="contacts.length===0" class="text-center mt-20 opacity-60">
-      No contacts yet
+
+  <div class="text-xl font-semibold mb-3">Contacts</div>
+
+  <!-- PINNED -->
+  <div v-if="favorites.length" class="mb-4">
+    <p class="text-sm opacity-60 mb-2">⭐ Pinned</p>
+
+    <div v-for="c in favorites"
+         class="contact-card p-3 mb-2 rounded-xl flex justify-between">
+
+      <span>{{c.name}}</span>
+
+      <button @click="startChat(c)">💬</button>
+
     </div>
-    <div v-for="c in contacts"
-         @touchstart="startPress(c)"
-         @touchend="cancelPress"
-         class="glass p-3 mb-3 rounded-xl flex items-center gap-3">
+  </div>
+
+  <!-- SEARCH -->
+  <div class="relative mb-4">
+    <span class="absolute left-4 top-1/2 -translate-y-1/2 opacity-50">🔍</span>
+
+    <input v-model="search"
+      placeholder="Search contacts..."
+      class="search-bar w-full pl-10 pr-10 py-3 rounded-full">
+
+    <button v-if="search"
+      @click="search=''"
+      class="absolute right-4 top-1/2 -translate-y-1/2 opacity-60">
+      ✖
+    </button>
+  </div>
+
+  <!-- EMPTY -->
+  <div v-if="filteredContacts.length===0 && favorites.length===0"
+       class="text-center mt-20 opacity-60 space-y-4">
+
+    <p>No contacts yet</p>
+
+    <div class="glass p-4 rounded-xl">
+      <p class="font-semibold">People you may know</p>
+      <p class="text-xs opacity-50">Coming soon</p>
+    </div>
+
+    <div class="glass p-4 rounded-xl">
+      <p class="font-semibold">Recently contacted</p>
+      <p class="text-xs opacity-50">Coming soon</p>
+    </div>
+
+  </div>
+
+  <!-- CONTACT LIST -->
+  <div v-for="c in filteredContacts"
+       @click="startChat(c)"
+       @touchstart="startPress(c)"
+       @touchend="cancelPress"
+       class="contact-card p-3 mb-3 rounded-2xl flex items-center justify-between">
+
+    <div class="flex items-center gap-3">
 
       <img :src="c.avatar || 'https://i.pravatar.cc/40'"
         class="w-10 h-10 rounded-full">
 
       <div>
-        <p class="font-medium">{{c.name}}</p>
+        <p class="font-medium flex items-center gap-2">
+          {{c.name}}
 
-        <!-- 🔥 BIO -->
-        <p class="text-xs opacity-50 truncate max-w-[200px]">
-          {{ c.bio || 'Hey there! I am using chat app' }}
+          <span v-if="isOnline(c.email)"
+            class="text-[10px] bg-green-500/20 text-green-400 px-2 py-[2px] rounded-full">
+            🟢 Online
+          </span>
+
+          <span v-else class="text-[10px] opacity-50">
+            🕒 {{ getLastSeen(c.email) ? formatTime(getLastSeen(c.email)) : 'offline' }}
+          </span>
+        </p>
+
+        <p class="text-xs opacity-50 truncate max-w-[150px]">
+          {{ c.bio || 'Available' }}
         </p>
       </div>
 
     </div>
+
+    <!-- ACTION -->
+    <div class="flex gap-2">
+
+      <button @click.stop="startChat(c)" class="action-btn">💬</button>
+
+      <button @click.stop="alert('Call soon')" class="action-btn">📞</button>
+
+      <button @click.stop="viewProfile(c)" class="action-btn">👁</button>
+
+      <button @click.stop="toggleFav(c)"
+        :class="favorites.find(f=>f.email===c.email) ? 'text-yellow-400' : 'opacity-50'">
+        ⭐
+      </button>
+
+    </div>
+
   </div>
-  
+
+</div>
+
   <!-- ===== PROFILE ===== -->
 <div v-if="tab==='profile'">
 
@@ -435,7 +557,7 @@ body {background:#020617;color:white;}
 </div>
 
 <!-- FLOAT BUTTON -->
-<button v-if="tab==='chats'"
+<button v-if="tab==='chats' || tab==='contacts'"
   @click="showSelectChat=true"
   class="fab fixed bottom-24 right-6 w-16 h-16 rounded-full flex items-center justify-center text-3xl">
   +
@@ -591,6 +713,7 @@ user:{},
 tab:'chats',
 contacts:[],
 chats:[],
+favorites:[],
 requests:[],
 search:'',
 showModal:false,
@@ -615,6 +738,12 @@ filteredChats(){
     const name = (c.friend_name || (c.user1===this.user.email?c.user2:c.user1)).toLowerCase()
     return name.includes(this.search.toLowerCase())
   })
+},
+
+filteredContacts(){
+  return this.contacts.filter(c =>
+    c.name?.toLowerCase().includes(this.search.toLowerCase())
+  )
 }
 },
 
@@ -698,6 +827,32 @@ async processImage(file){
 
     reader.readAsDataURL(file)
   })
+},
+
+viewProfile(c){
+  alert("Profile: " + c.name)
+},
+
+toggleFav(c){
+  if(!this.favorites) this.favorites=[]
+
+  const i = this.favorites.findIndex(x=>x.email===c.email)
+
+  if(i>-1){
+    this.favorites.splice(i,1)
+  }else{
+    this.favorites.unshift(c)
+  }
+},
+
+isOnline(email){
+  return this.onlineUsers.includes(email)
+},
+getLastSeen(email){
+  const c = this.chats.find(x =>
+    (x.user1===this.user.email ? x.user2 : x.user1) === email
+  )
+  return c?.friend_last_seen
 },
 
 openImage(src){

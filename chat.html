@@ -256,7 +256,7 @@ this.ws.onmessage = (e)=>{
   const last = this.messages[this.messages.length - 1]
 
   // 🔥 anti duplicate
-    if(!last || last.created_at !== msg.created_at){
+  if(!last || (last.text !== msg.text || last.file !== msg.file)){
     this.messages.push(msg)
     this.scrollBottom()
   }

@@ -299,8 +299,6 @@ send(){
 
   this.ws.send(JSON.stringify(msg))
   this.messages.push(msg)
-
-  this.text=""
   this.scrollBottom()
 },
 

@@ -167,6 +167,8 @@ async mounted(){
 
 this.user = JSON.parse(localStorage.getItem("user") || "{}")
 this.chat = JSON.parse(localStorage.getItem("activeChat") || "{}")
+this.syncMessages()
+setInterval(()=>this.syncMessages(),2000)
 
 if(!this.chat.email){
   alert("Chat tidak valid")
@@ -180,15 +182,6 @@ await this.syncMessages(true)
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
-// 🔥 fallback sync (AMAN)
-this.syncInterval = setInterval(()=>{
-  if(document.hidden) return
-
-  // hanya sync kalau WS bermasalah
-  if(!this.ws || this.ws.readyState !== 1){
-    this.syncMessages()
-  }
-}, 3000)
 
 // ONLINE PING
 setInterval(()=>{

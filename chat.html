@@ -102,7 +102,12 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
         </a>
       </div>
 
-      <div v-else>{{m.text}}</div>
+      <div v-else>
+        {{m.text}}
+        <div class="text-[10px] text-right mt-1 opacity-60 flex justify-end gap-1">
+          {{ formatTime(m.created_at) }}
+        </div>
+      </div>
 
     </div>
   </div>
@@ -281,6 +286,17 @@ markAsRead(){
     }))
   }
 },
+formatTime(t){
+  if(!t) return ''
+
+  const d = new Date(t)
+
+  const h = d.getHours().toString().padStart(2,'0')
+  const m = d.getMinutes().toString().padStart(2,'0')
+
+  return h + ':' + m
+},
+
 toggleEmoji(){
   this.showEmoji=!this.showEmoji
 },
@@ -335,7 +351,8 @@ sendFile(e){
       room:this.room,
       sender:this.user.email,
       file:reader.result,
-      file_type:file.type
+      file_type:file.type,
+      created_at: new.Date().toISOString()
     }
 
     this.ws.send(JSON.stringify(payload))
@@ -352,7 +369,8 @@ send(){
     type:"message",
     room:this.room,
     sender:this.user.email,
-    text:this.text
+    text:this.text,
+    created_at: new.Date().toISOString()
   }
 
   this.ws.send(JSON.stringify(msg))

@@ -102,24 +102,7 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
         </a>
       </div>
 
-      <div>
-  {{m.text}}
-
-  <!-- READ RECEIPT -->
-  <div v-if="m.sender===user.email"
-       class="text-[10px] text-right mt-1 opacity-60">
-
-    <!-- ✓ -->
-    <span v-if="!deliveredMap[chat.email]">✓</span>
-
-    <!-- ✓✓ -->
-    <span v-else-if="!readMap[chat.email]">✓✓</span>
-
-    <!-- ✓✓ biru -->
-    <span v-else class="text-blue-400">✓✓</span>
-
-  </div>
-</div>
+      <div v-else>{{m.text}}</div>
 
     </div>
   </div>
@@ -207,29 +190,10 @@ if(!this.chat.avatar){
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
 await this.syncMessages(true)
-this.$nextTick(()=>{
-  const el = this.$refs.chatBox
-  if(!el) return
-
-  this._onScroll = ()=>{
-    const isBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 50
-
-    if(isBottom){
-      this.markAsRead()
-    }
-  }
-
-  el.addEventListener("scroll", this._onScroll)
-})
 
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
-
-this.ws.onopen = () => {
-  this.markAsRead()
-}
 
 // ONLINE PING
 setInterval(()=>{
@@ -261,12 +225,14 @@ this.ws.onmessage = (e)=>{
     this.scrollBottom()
   }
 }
+  // DELIVERED
 if(msg.type==="delivered"){
-  this.deliveredMap[this.chat.email] = true
+  this.deliveredMap[msg.sender] = true
 }
 
+// READ
 if(msg.type==="read"){
-  this.readMap[this.chat.email] = true
+  this.readMap[msg.user] = true
 }
 
   if(msg.type === "typing"){
@@ -314,7 +280,6 @@ markAsRead(){
     }))
   }
 },
-
 toggleEmoji(){
   this.showEmoji=!this.showEmoji
 },
@@ -405,6 +370,24 @@ formatLastSeen(t){
 
   return new Date(t).toLocaleDateString()
 },
+
+scrollBottom(force=false){
+  this.$nextTick(()=>{
+    const el = this.$refs.chatBox
+
+    const isNearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 100
+
+    if(isNearBottom || force){
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior:"smooth"
+      })
+    }
+  })
+}
+
+}
 
 }).mount("#app")
 </script>

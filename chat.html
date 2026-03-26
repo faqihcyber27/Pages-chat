@@ -189,12 +189,12 @@ setInterval(()=>{
       user:this.user.email
     }))
   }
-},3000)
+},2000)
 
 // CLEAN ONLINE
 setInterval(()=>{
   const now = Date.now()
-  this.onlineUsers = this.onlineUsers.filter(u => now - u.time < 5000)
+  this.onlineUsers = this.onlineUsers.filter(u => now - u.time < 2000)
 },2000)
 
 // WS LISTENER

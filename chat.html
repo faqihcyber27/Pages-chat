@@ -192,10 +192,6 @@ if(!this.chat.avatar){
   this.chat.avatar = this.defaultAvatar
 }
 
-this.ws.onopen = () => {
-  this.markAsRead()
-}
-
 this.syncMessages()
 setInterval(()=>this.syncMessages(),2000)
 
@@ -211,20 +207,29 @@ if(!this.chat.avatar){
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
 await this.syncMessages(true)
-this.$refs.chatBox.addEventListener("scroll", ()=>{
+this.$nextTick(()=>{
   const el = this.$refs.chatBox
+  if(!el) return
 
-  const isBottom =
-    el.scrollHeight - el.scrollTop - el.clientHeight < 50
+  this._onScroll = ()=>{
+    const isBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 50
 
-  if(isBottom){
-    this.markAsRead()
+    if(isBottom){
+      this.markAsRead()
+    }
   }
+
+  el.addEventListener("scroll", this._onScroll)
 })
 
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
+
+this.ws.onopen = () => {
+  this.markAsRead()
+}
 
 // ONLINE PING
 setInterval(()=>{
@@ -251,7 +256,8 @@ this.ws.onmessage = (e)=>{
   const last = this.messages[this.messages.length - 1]
 
   // 🔥 anti duplicate
-  if(!last || (last.text !== msg.text || last.file !== msg.file)){
+  if(!last || last.created_at !== msg.created_at){
+    msg.created_at = new Date().toISOString()
     this.messages.push(msg)
     this.scrollBottom()
   }
@@ -288,7 +294,15 @@ if(msg.type==="read"){
   }
 }
 
-}, // ✅ PENTING
+},
+// ✅ PENTING
+
+unmounted(){
+  const el = this.$refs.chatBox
+  if(el && this._onScroll){
+    el.removeEventListener("scroll", this._onScroll)
+  }
+},
 
 methods:{
 markAsRead(){
@@ -364,7 +378,8 @@ sendFile(e){
       room:this.room,
       sender:this.user.email,
       file:reader.result,
-      file_type:file.type
+      file_type:file.type,
+      file_name:file.name
     }
 
     this.ws.send(JSON.stringify(payload))
@@ -400,24 +415,6 @@ formatLastSeen(t){
 
   return new Date(t).toLocaleDateString()
 },
-
-scrollBottom(force=false){
-  this.$nextTick(()=>{
-    const el = this.$refs.chatBox
-
-    const isNearBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 100
-
-    if(isNearBottom || force){
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior:"smooth"
-      })
-    }
-  })
-}
-
-}
 
 }).mount("#app")
 </script>

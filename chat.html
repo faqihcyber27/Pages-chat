@@ -202,14 +202,8 @@ this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
   if(msg.type==="message"){
-
-  const last = this.messages[this.messages.length - 1]
-
-  // 🔥 anti duplicate
-  if(!last || (last.text !== msg.text || last.file !== msg.file)){
-    this.messages.push(msg)
-    this.scrollBottom()
-  }
+  this.messages.push(msg)
+  this.scrollBottom()
 }
 
   if(msg.type === "typing"){

@@ -61,8 +61,8 @@ body {background:#020617;color:white;}
       <!-- LEFT -->
       <div class="flex items-center gap-3">
 
-        <img src="https://i.pravatar.cc/40"
-             class="w-10 h-10 rounded-full">
+        <img :src="c.avatar || 'https://i.pravatar.cc/40'"
+          class="w-10 h-10 rounded-full">
 
         <div>
 
@@ -76,7 +76,7 @@ body {background:#020617;color:white;}
 
           <!-- ONLINE DOT -->
 
-            <span v-if="onlineUsers.includes(c.friend_email)"
+            <span v-if="onlineUsers.includes(getFriendEmail(c))"
               class="w-2 h-2 bg-green-400 rounded-full"></span>
           </p>
 
@@ -139,31 +139,54 @@ body {background:#020617;color:white;}
 
   <!-- ===== CONTACTS ===== -->
   <div v-if="tab==='contacts'">
-
     <div class="text-xl font-semibold mb-3">Contacts</div>
-
     <button @click="showModal=true"
       class="bg-purple-600 px-4 py-2 rounded-lg mb-4 w-full">
       + Add Friend
     </button>
-
     <div v-if="contacts.length===0" class="text-center mt-20 opacity-60">
       No contacts yet
     </div>
-
     <div v-for="c in contacts"
          @touchstart="startPress(c)"
          @touchend="cancelPress"
          class="glass p-3 mb-3 rounded-xl flex items-center gap-3">
 
-      <img src="https://i.pravatar.cc/40"
-           class="w-10 h-10 rounded-full">
+      <img :src="c.avatar || 'https://i.pravatar.cc/40'"
+        class="w-10 h-10 rounded-full">
 
       <p class="font-medium">{{c.name}}</p>
 
     </div>
-
   </div>
+  
+  <!-- ===== PROFILE ===== -->
+<div v-if="tab==='profile'">
+
+  <div class="text-xl font-semibold mb-4">Profile</div>
+
+  <!-- AVATAR -->
+  <div class="flex flex-col items-center mb-4">
+    <img :src="user.avatar || 'https://i.pravatar.cc/100'"
+         class="w-24 h-24 rounded-full mb-2">
+
+    <input type="file" @change="uploadAvatar">
+  </div>
+
+  <!-- NAME -->
+  <input v-model="user.name"
+         class="w-full p-2 bg-white/10 rounded mb-3">
+  <textarea v-model="user.bio"
+    placeholder="Status bio..."
+    class="w-full p-2 bg-white/10 rounded mb-3">
+  </textarea>
+
+  <button @click="saveProfile"
+          class="bg-purple-600 w-full p-2 rounded">
+    Save
+  </button>
+
+</div>
 
 </div>
 
@@ -178,6 +201,7 @@ body {background:#020617;color:white;}
 <div class="glass flex justify-around p-4 text-xl">
   <button @click="tab='chats'" :class="tab==='chats'?'active':''">💬</button>
   <button @click="tab='contacts'" :class="tab==='contacts'?'active':''">👤</button>
+  <button @click="tab='profile'" :class="tab==='profile'?'active':''">⚙️</button>
 </div>
 
 <!-- ADD FRIEND -->
@@ -295,8 +319,8 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
      @click="startChat(c)"
      class="flex items-center gap-3 p-2 rounded hover:bg-white/10 cursor-pointer">
 
-  <img src="https://i.pravatar.cc/40"
-       class="w-8 h-8 rounded-full">
+  <img :src="c.avatar || 'https://i.pravatar.cc/40'"
+     class="w-10 h-10 rounded-full">
 
   <p>{{c.name}}</p>
 
@@ -350,6 +374,8 @@ filteredChats(){
 
 async mounted(){
 this.user=JSON.parse(localStorage.getItem("user"))
+this.user.avatar = this.user.avatar || null
+this.user.bio = this.user.bio || ""
 this.loadAll()
 setInterval(()=>this.loadAll(),2000)
 
@@ -386,6 +412,70 @@ this.ws.onmessage = (e)=>{
 },
 
 methods:{
+
+async processImage(file){
+  return new Promise((resolve)=>{
+    const img = new Image()
+    const reader = new FileReader()
+
+    reader.onload = e => {
+      img.src = e.target.result
+    }
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      const size = Math.min(img.width, img.height)
+
+      // crop center (square)
+      canvas.width = 300
+      canvas.height = 300
+
+      const ctx = canvas.getContext("2d")
+
+      ctx.drawImage(
+        img,
+        (img.width - size)/2,
+        (img.height - size)/2,
+        size,
+        size,
+        0,
+        0,
+        300,
+        300
+      )
+
+      // compress
+      const compressed = canvas.toDataURL("image/jpeg", 0.7)
+
+      resolve(compressed)
+    }
+
+    reader.readAsDataURL(file)
+  })
+},
+
+async uploadAvatar(e){
+  const file = e.target.files[0]
+  if(!file) return
+
+  this.user.avatar = await this.processImage(file)
+},
+
+async saveProfile(){
+  await fetch(API+"/update-profile",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      email:this.user.email,
+      name:this.user.name,
+      avatar:this.user.avatar,
+      bio:this.user.bio
+    })
+  })
+
+  localStorage.setItem("user", JSON.stringify(this.user))
+  alert("Profile updated")
+},
 
 getFriendEmail(c){
   return c.friend_email || (c.user1===this.user.email ? c.user2 : c.user1)

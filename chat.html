@@ -102,7 +102,24 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
         </a>
       </div>
 
-      <div v-else>{{m.text}}</div>
+      <div>
+  {{m.text}}
+
+  <!-- READ RECEIPT -->
+  <div v-if="m.sender===user.email"
+       class="text-[10px] text-right mt-1 opacity-60">
+
+    <!-- ✓ -->
+    <span v-if="!deliveredMap[chat.email]">✓</span>
+
+    <!-- ✓✓ -->
+    <span v-else-if="!readMap[chat.email]">✓✓</span>
+
+    <!-- ✓✓ biru -->
+    <span v-else class="text-blue-400">✓✓</span>
+
+  </div>
+</div>
 
     </div>
   </div>
@@ -151,6 +168,8 @@ return{
 user:{},
 chat:{},
 messages:[],
+readMap:{},
+deliveredMap:{},
 text:'',
 previewImage:null,
 ws:null,
@@ -173,6 +192,10 @@ if(!this.chat.avatar){
   this.chat.avatar = this.defaultAvatar
 }
 
+this.ws.onopen = () => {
+  this.markAsRead()
+}
+
 this.syncMessages()
 setInterval(()=>this.syncMessages(),2000)
 
@@ -188,6 +211,16 @@ if(!this.chat.avatar){
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
 await this.syncMessages(true)
+this.$refs.chatBox.addEventListener("scroll", ()=>{
+  const el = this.$refs.chatBox
+
+  const isBottom =
+    el.scrollHeight - el.scrollTop - el.clientHeight < 50
+
+  if(isBottom){
+    this.markAsRead()
+  }
+})
 
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
@@ -223,6 +256,13 @@ this.ws.onmessage = (e)=>{
     this.scrollBottom()
   }
 }
+if(msg.type==="delivered"){
+  this.deliveredMap[this.chat.email] = true
+}
+
+if(msg.type==="read"){
+  this.readMap[this.chat.email] = true
+}
 
   if(msg.type === "typing"){
   if(msg.sender === this.user.email) return  // 🚫 blok diri sendiri
@@ -251,6 +291,24 @@ this.ws.onmessage = (e)=>{
 }, // ✅ PENTING
 
 methods:{
+markAsRead(){
+  fetch(API+"/mark-read",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      room:this.room,
+      user:this.user.email
+    })
+  })
+
+  if(this.ws && this.ws.readyState===1){
+    this.ws.send(JSON.stringify({
+      type:"read",
+      room:this.room,
+      user:this.user.email
+    }))
+  }
+},
 
 toggleEmoji(){
   this.showEmoji=!this.showEmoji

@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://unpkg.com/vue@3"></script>
+<!-- 🔥 FIX CDN -->
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
@@ -12,7 +13,6 @@ body {
   background: radial-gradient(circle at top, #0f172a, #020617);
   color: white;
 }
-
 .me { background: #7c3aed; }
 .them { background: rgba(255,255,255,0.08); }
 </style>
@@ -21,56 +21,48 @@ body {
 <body>
 
 <div id="app" class="h-screen flex flex-col">
-  
+
+<!-- IMAGE PREVIEW -->
 <div v-if="previewImage"
      class="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
      @click="previewImage=null">
-
-  <img :src="previewImage"
-       class="max-w-full max-h-full rounded-lg">
-
+  <img :src="previewImage" class="max-w-full max-h-full rounded-lg">
 </div>
 
-<!-- PROFILE POPUP -->
+<!-- PROFILE -->
 <div v-if="showProfile"
 class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
 @click="showProfile=false">
 
   <div @click.stop
-       class="bg-[#020617] p-6 rounded-2xl text-center w-80 shadow-xl transition duration-300 scale-100">
+       class="bg-[#020617] p-6 rounded-2xl text-center w-80">
 
-    <!-- FOTO (LEBIH BESAR) -->
     <img :src="chat.avatar || 'https://i.pravatar.cc/150'"
          @click="openImage(chat.avatar)"
-         class="w-32 h-32 rounded-full mx-auto mb-4 object-cover cursor-pointer border-4 border-white/10">
+         class="w-32 h-32 rounded-full mx-auto mb-4 object-cover">
 
-    <!-- NAMA (LEBIH BESAR) -->
-    <p class="font-semibold text-xl">
+    <p class="text-xl font-semibold">
       {{chat.name || chat.email}}
     </p>
 
-    <!-- BIO (LEBIH JELAS) -->
-    <p class="text-sm opacity-70 mt-2 leading-relaxed">
+    <p class="text-sm opacity-70 mt-2">
       {{chat.bio || 'Available'}}
     </p>
 
   </div>
 </div>
 
-<!-- HEADER FIX -->
-<div class="p-4 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-purple-500">
+<!-- HEADER -->
+<div class="p-4 flex items-center gap-3 bg-purple-600">
 
-  <!-- BACK -->
-  <button onclick="history.back()" class="text-xl">←</button>
+  <button onclick="history.back()">←</button>
 
-  <!-- AVATAR -->
   <img :src="chat.avatar || 'https://i.pravatar.cc/40'"
        @click="showProfile=true"
-       class="w-10 h-10 rounded-full object-cover cursor-pointer">
+       class="w-10 h-10 rounded-full">
 
-  <!-- INFO -->
   <div class="flex-1">
-    <p class="font-semibold leading-tight">
+    <p class="font-semibold">
       {{chat.name || chat.email}}
     </p>
 
@@ -79,16 +71,14 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
         online
       </span>
       <span v-else>
-        {{ formatLastSeen(
-        lastSeenMap[chat.email] || chat.last_seen
-        ) }}
+        {{ formatLastSeen(lastSeenMap[chat.email]) }}
       </span>
     </p>
   </div>
 
 </div>
 
-<!-- CHAT AREA -->
+<!-- CHAT -->
 <div ref="chatBox"
      class="flex-1 overflow-auto p-3 space-y-2">
 
@@ -100,70 +90,50 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
       'px-4 py-2 rounded-2xl max-w-[70%]',
       m.sender===user.email ? 'me' : 'them'
     ]">
+
       <div v-if="m.file">
+        <img v-if="m.file_type && m.file_type.includes('image')"
+             :src="m.file"
+             @click="openImage(m.file)"
+             class="rounded-lg max-w-[200px] cursor-pointer">
 
-  <!-- IMAGE -->
-  <img v-if="m.file_type && m.file_type.includes('image')"
-     :src="m.file"
-     @click="openImage(m.file)"
-     class="rounded-lg max-w-[200px] cursor-pointer hover:opacity-80">
+        <a v-else :href="m.file" download class="underline text-blue-400">
+          {{m.file_name}}
+        </a>
+      </div>
 
-  <!-- FILE -->
-  <a v-else :href="m.file" download
-     class="text-blue-400 underline">
-     {{m.file_name}}
-  </a>
+      <div v-else>{{m.text}}</div>
 
-</div>
-
-<div v-else>
-  {{m.text}}
-</div>
     </div>
-
   </div>
 
 </div>
 
-<!-- 🔥 TYPING INDICATOR -->
-<div v-if="typingUser"
-class="text-xs opacity-60 px-3 pb-2">
+<!-- TYPING -->
+<div v-if="typingUser" class="text-xs px-3 pb-2 opacity-60">
   {{typingUser}} is typing...
 </div>
 
 <!-- INPUT -->
-<div class="p-3 flex gap-2 items-center bg-black/40">
+<div class="p-3 flex gap-2 bg-black/40">
 
-  <!-- 📎 FILE -->
-  <label class="text-xl cursor-pointer">
-    📎
-    <input type="file" hidden @change="sendFile">
-  </label>
+  <input type="file" hidden ref="file" @change="sendFile">
+  <button @click="$refs.file.click()">📎</button>
 
-  <!-- 😊 EMOJI -->
-  <button @click="toggleEmoji" class="text-xl">😊</button>
+  <button @click="toggleEmoji">😊</button>
 
-  <!-- INPUT -->
   <input v-model="text"
          @input="sendTyping"
          @keyup.enter="send"
-         placeholder="Type message..."
-         class="flex-1 px-4 py-2 rounded-full bg-white/10 outline-none">
+         class="flex-1 px-4 py-2 rounded-full bg-white/10">
 
-  <!-- SEND -->
-  <button v-if="text"
-          @click="send"
-          class="bg-purple-600 px-4 py-2 rounded-full">
-    ➤
-  </button>
+  <button v-if="text" @click="send">➤</button>
 
 </div>
 
-<!-- 😊 EMOJI PICKER -->
-<div v-if="showEmoji" class="p-3 bg-black/60 flex flex-wrap gap-2">
-  <span v-for="e in emojis"
-        @click="addEmoji(e)"
-        class="text-xl cursor-pointer">
+<!-- EMOJI -->
+<div v-if="showEmoji" class="p-3 flex flex-wrap gap-2 bg-black/60">
+  <span v-for="e in emojis" @click="addEmoji(e)">
     {{e}}
   </span>
 </div>
@@ -174,6 +144,7 @@ class="text-xs opacity-60 px-3 pb-2">
 const API = "https://worker-chat.jihadwajib68.workers.dev"
 
 Vue.createApp({
+
 data(){
 return{
 user:{},
@@ -184,13 +155,8 @@ previewImage:null,
 ws:null,
 room:'',
 showProfile:false,
-isConnected:false,
-lastCount:0,
-
 showEmoji:false,
-emojis:["😀","😂","😍","🔥","👍","🙏","😭","😎","😡","🥶"],
-
-// 🔥 NEW
+emojis:["😀","😂","😍","🔥","👍","🙏","😭","😎"],
 typingUser:'',
 onlineUsers:[],
 lastSeenMap:{}
@@ -198,53 +164,26 @@ lastSeenMap:{}
 },
 
 async mounted(){
-  setInterval(()=>{
-  const now = Date.now()
-
-  this.onlineUsers = this.onlineUsers.filter(u => {
-    return (now - u.time) < 5000
-  })
-},3000)
 
 this.user = JSON.parse(localStorage.getItem("user") || "{}")
 this.chat = JSON.parse(localStorage.getItem("activeChat") || "{}")
 
-if(!this.chat || !this.chat.email){
+if(!this.chat.email){
   alert("Chat tidak valid")
   return
 }
 
-// ROOM
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
-// LOAD HISTORY
 await this.syncMessages(true)
 
-// CONNECT WS
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
 
-// HYBRID FIX
+// ONLINE PING
 setInterval(()=>{
-  if(!document.hidden){
-    this.syncMessages()
-  }
-},1000)
-
-this.ws.onopen = () => {
-  this.isConnected = true
-
-  // 🔥 ONLINE SIGNAL
-  this.ws.send(JSON.stringify({
-    type:"online",
-    user:this.user.email
-  }))
-}
-
-// 🔥 FIX POSISI
-setInterval(()=>{
-  if(this.ws && this.ws.readyState===1){
+  if(this.ws.readyState===1){
     this.ws.send(JSON.stringify({
       type:"online",
       user:this.user.email
@@ -252,34 +191,28 @@ setInterval(()=>{
   }
 },3000)
 
+// CLEAN ONLINE
+setInterval(()=>{
+  const now = Date.now()
+  this.onlineUsers = this.onlineUsers.filter(u => now - u.time < 5000)
+},2000)
+
+// WS LISTENER
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // ===== MESSAGE =====
-  if(msg.type === "message" || !msg.type){
-
-    if(msg.sender === this.user.email) return
-
-    const last = this.messages[this.messages.length - 1]
-    if(!last || (last.text !== msg.text && last.file !== msg.file)){
+  if(msg.type==="message"){
+    if(msg.sender!==this.user.email){
       this.messages.push(msg)
-    }
-
-    requestAnimationFrame(()=>{
       this.scrollBottom()
-    })
+    }
   }
 
-  // ===== TYPING =====
-  if(msg.type === "typing" && msg.sender !== this.user.email){
+  if(msg.type==="typing"){
     this.typingUser = msg.name
-
-    setTimeout(()=>{
-      this.typingUser = ''
-    },1500)
+    setTimeout(()=> this.typingUser='',1500)
   }
 
-  // ===== ONLINE =====
   if(msg.type==="online"){
     const now = Date.now()
 
@@ -292,127 +225,95 @@ this.ws.onmessage = (e)=>{
 
     this.lastSeenMap[msg.user] = msg.last_seen
   }
+}
 
-}, // ✅ TUTUP DI SINI (PALING BAWAH)
+}, // ✅ PENTING
 
 methods:{
 
 toggleEmoji(){
-  this.showEmoji = !this.showEmoji
-},
-
-openImage(src){
-  this.showProfile = false
-  this.previewImage = src
+  this.showEmoji=!this.showEmoji
 },
 
 addEmoji(e){
-  this.text += e
-  this.showEmoji = false
+  this.text+=e
+},
+
+openImage(src){
+  this.previewImage=src
+  this.showProfile=false
+},
+
+sendTyping(){
+  if(this.ws.readyState===1){
+    this.ws.send(JSON.stringify({
+      type:"typing",
+      sender:this.user.email,
+      name:this.user.name
+    }))
+  }
 },
 
 sendFile(e){
-  const file = e.target.files[0]
+  const file=e.target.files[0]
   if(!file) return
 
-  const reader = new FileReader()
+  const reader=new FileReader()
 
-  reader.onload = () => {
-    const payload = {
+  reader.onload=()=>{
+    const payload={
       type:"message",
       room:this.room,
       sender:this.user.email,
       file:reader.result,
-      file_name:file.name,
-      file_type:file.type || "image"
+      file_type:file.type
     }
 
     this.ws.send(JSON.stringify(payload))
-
     this.messages.push(payload)
-    this.scrollBottom()
   }
 
   reader.readAsDataURL(file)
 },
 
-formatLastSeen(time){
-  if(!time) return 'offline'
-
-  const diff = Math.floor((Date.now() - new Date(time)) / 1000)
-
-  if(diff < 60) return 'last seen just now'
-  if(diff < 3600) return 'last seen ' + Math.floor(diff/60) + ' min ago'
-  if(diff < 86400) return 'last seen ' + Math.floor(diff/3600) + ' hour ago'
-
-  return new Date(time).toLocaleDateString()
-},
-
-// 🔥 TYPING SEND
-sendTyping(){
-if(this.ws && this.ws.readyState===1){
-  this.ws.send(JSON.stringify({
-    type:"typing",
-    sender:this.user.email,
-    name:this.user.name
-  }))
-}
-},
-
-// SYNC MESSAGE
-async syncMessages(force=false){
-  const res = await fetch(API + "/messages?room=" + this.room)
-  const data = await res.json()
-
-  const lastLocal = this.messages[this.messages.length - 1]
-  const lastServer = data[data.length - 1]
-
-  if(force || !lastLocal || !lastServer || lastLocal.text !== lastServer.text || lastLocal.file !== lastServer.file){
-    this.messages = data
-    this.lastCount = data.length
-
-    this.scrollBottom(true)
-  }
-},
-
 send(){
+  if(!this.text) return
 
-if(!this.text) return
-
-// tampil langsung
-this.messages.push({
-  sender:this.user.email,
-  text:this.text
-})
-
-// kirim WS
-if(this.isConnected){
-  this.ws.send(JSON.stringify({
+  const msg={
     type:"message",
     room:this.room,
     sender:this.user.email,
     text:this.text
-  }))
-}
+  }
 
-this.text=""
-this.scrollBottom()
+  this.ws.send(JSON.stringify(msg))
+  this.messages.push(msg)
+
+  this.text=""
 },
 
-scrollBottom(force=false){
-this.$nextTick(()=>{
-  const el = this.$refs.chatBox
+formatLastSeen(t){
+  if(!t) return 'offline'
 
-  const isNearBottom =
-    el.scrollHeight - el.scrollTop - el.clientHeight < 100
+  const d=(Date.now()-new Date(t))/1000
 
-  if(isNearBottom || force){
-    el.scrollTo({
-      top: el.scrollHeight,
-      behavior:"smooth"
-    })
-  }
-})
+  if(d<60) return 'just now'
+  if(d<3600) return Math.floor(d/60)+' min ago'
+  if(d<86400) return Math.floor(d/3600)+' hour ago'
+
+  return new Date(t).toLocaleDateString()
+},
+
+async syncMessages(){
+  const res=await fetch(API+"/messages?room="+this.room)
+  this.messages=await res.json()
+},
+
+scrollBottom(){
+  this.$nextTick(()=>{
+    const el=this.$refs.chatBox
+    el.scrollTop=el.scrollHeight
+  })
 }
 
 }

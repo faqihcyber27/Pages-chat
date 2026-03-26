@@ -233,7 +233,7 @@ this.ws.onopen = () => {
 
 // ONLINE PING
 setInterval(()=>{
-  if(this.ws && this.readyState===1){
+  if(this.ws && this.ws.readyState===1){
     this.ws.send(JSON.stringify({
       type:"online",
       user:this.user.email
@@ -293,7 +293,7 @@ if(msg.type==="read"){
   }
 }
 
-}
+},
 
 methods:{
 markAsRead(){

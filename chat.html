@@ -377,8 +377,7 @@ sendFile(e){
       room:this.room,
       sender:this.user.email,
       file:reader.result,
-      file_type:file.type,
-      file_name:file.name
+      file_type:file.type
     }
 
     this.ws.send(JSON.stringify(payload))

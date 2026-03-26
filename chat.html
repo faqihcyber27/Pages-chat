@@ -31,15 +31,41 @@ body {
 
 </div>
 
+<!-- PROFILE POPUP -->
+<div v-if="showProfile"
+class="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+@click="showProfile=false">
+
+  <div @click.stop
+       class="bg-[#020617] p-6 rounded-xl text-center w-72 transition duration-300 scale-100">
+
+    <img :src="chat.avatar || 'https://i.pravatar.cc/100'"
+          @click="openImage(chat.avatar)"
+          class="w-24 h-24 rounded-full mx-auto mb-3 object-cover cursor-pointer">
+
+    <p class="font-semibold text-lg">
+      {{chat.name || chat.email}}
+    </p>
+
+    <p class="text-sm opacity-60 mt-2">
+      {{chat.bio || 'Available'}}
+    </p>
+
+  </div>
+</div>
 <!-- HEADER -->
 <div class="p-4 flex items-center gap-3 bg-purple-600">
   <button onclick="history.back()">←</button>
 
-  <img src="https://i.pravatar.cc/40"
-       class="w-9 h-9 rounded-full">
+  <img :src="chat.avatar || 'https://i.pravatar.cc/100'"
+     @click="openImage(chat.avatar)"
+     class="w-24 h-24 rounded-full mx-auto mb-3 object-cover cursor-pointer">
 
   <div>
-    <p class="font-semibold">{{chat.name || chat.email}}</p>
+    <p class="font-semibold cursor-pointer"
+      @click="showProfile=true">
+      {{chat.name || chat.email}}
+    </p>
 
     <!-- 🔥 ONLINE STATUS -->
     <p class="text-xs opacity-70">
@@ -143,6 +169,7 @@ text:'',
 previewImage:null,
 ws:null,
 room:'',
+showProfile:false,
 isConnected:false,
 lastCount:0,
 
@@ -247,6 +274,7 @@ toggleEmoji(){
 },
 
 openImage(src){
+  this.showProfile = false
   this.previewImage = src
 },
 

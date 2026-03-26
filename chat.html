@@ -180,6 +180,15 @@ await this.syncMessages(true)
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
 )
+// 🔥 fallback sync (AMAN)
+this.syncInterval = setInterval(()=>{
+  if(document.hidden) return
+
+  // hanya sync kalau WS bermasalah
+  if(!this.ws || this.ws.readyState !== 1){
+    this.syncMessages()
+  }
+}, 3000)
 
 // ONLINE PING
 setInterval(()=>{
@@ -203,11 +212,13 @@ this.ws.onmessage = (e)=>{
 
   if(msg.type==="message"){
 
-  // 🔥 skip message sendiri (biar ga double)
-  if(msg.sender === this.user.email) return
+  const last = this.messages[this.messages.length - 1]
 
-  this.messages.push(msg)
-  this.scrollBottom()
+  // 🔥 anti duplicate
+  if(!last || (last.text !== msg.text || last.file !== msg.file)){
+    this.messages.push(msg)
+    this.scrollBottom()
+  }
 }
 
   if(msg.type === "typing"){

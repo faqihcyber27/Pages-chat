@@ -222,6 +222,7 @@ this.ws.onmessage = (e)=>{
   // 🔥 anti duplicate
   if(!last || (last.text !== msg.text || last.file !== msg.file)){
     this.messages.push(msg)
+    this.text = ''
     this.scrollBottom()
   }
 }

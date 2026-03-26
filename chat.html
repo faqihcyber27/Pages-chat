@@ -294,7 +294,6 @@ if(msg.type==="read"){
 }
 
 },
-// ✅ PENTING
 
 unmounted(){
   const el = this.$refs.chatBox
@@ -337,6 +336,15 @@ async loadUserProfile(){
     this.chat.name = found.friend_name
     this.chat.bio = found.friend_bio
   }
+},
+
+scrollBottom(force=false){
+  this.$nextTick(()=>{
+    const el = this.$refs.chatBox
+    if(!el) return
+
+    el.scrollTop = el.scrollHeight
+  })
 },
 
 async syncMessages(){

@@ -182,11 +182,23 @@ body {background:#020617;color:white;}
 
   <!-- AVATAR -->
   <div class="flex flex-col items-center mb-4">
-    <img :src="user.avatar || 'https://i.pravatar.cc/100'"
-         class="w-24 h-24 rounded-full mb-2">
 
-    <input type="file" @change="uploadAvatar">
-  </div>
+  <img :src="user.avatar || 'https://i.pravatar.cc/100'"
+       class="w-24 h-24 rounded-full mb-2 object-cover">
+
+  <!-- HIDDEN INPUT -->
+  <input type="file"
+         ref="fileInput"
+         @change="uploadAvatar"
+         class="hidden">
+
+  <!-- BUTTON EDIT -->
+  <button @click="$refs.fileInput.click()"
+    class="bg-green-500 px-4 py-1 rounded-full text-sm mt-1">
+    Edit
+  </button>
+
+</div>
 
   <!-- NAME -->
   <input v-model="user.name"

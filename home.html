@@ -115,6 +115,10 @@ body {background:#020617;color:white;}
   <!-- 💬 TEXT -->
   <span v-else-if="c.last_message">
     {{c.last_message}}
+    <span class="ml-1 text-xs">
+      <span v-if="c.unread==0">✓✓</span>
+      <span v-else>✓</span>
+    </span>
   </span>
 
   <!-- DEFAULT -->

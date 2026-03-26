@@ -33,45 +33,52 @@ body {
 
 <!-- PROFILE POPUP -->
 <div v-if="showProfile"
-class="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
+class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
 @click="showProfile=false">
 
   <div @click.stop
-       class="bg-[#020617] p-6 rounded-xl text-center w-72 transition duration-300 scale-100">
+       class="bg-[#020617] p-6 rounded-2xl text-center w-80 shadow-xl transition duration-300 scale-100">
 
-    <img :src="chat.avatar || 'https://i.pravatar.cc/100'"
-          @click="openImage(chat.avatar)"
-          class="w-24 h-24 rounded-full mx-auto mb-3 object-cover cursor-pointer">
+    <!-- FOTO (LEBIH BESAR) -->
+    <img :src="chat.avatar || 'https://i.pravatar.cc/150'"
+         @click="openImage(chat.avatar)"
+         class="w-32 h-32 rounded-full mx-auto mb-4 object-cover cursor-pointer border-4 border-white/10">
 
-    <p class="font-semibold text-lg">
+    <!-- NAMA (LEBIH BESAR) -->
+    <p class="font-semibold text-xl">
       {{chat.name || chat.email}}
     </p>
 
-    <p class="text-sm opacity-60 mt-2">
+    <!-- BIO (LEBIH JELAS) -->
+    <p class="text-sm opacity-70 mt-2 leading-relaxed">
       {{chat.bio || 'Available'}}
     </p>
 
   </div>
 </div>
-<!-- HEADER -->
-<div class="p-4 flex items-center gap-3 bg-purple-600">
-  <button onclick="history.back()">←</button>
 
-  <img :src="chat.avatar || 'https://i.pravatar.cc/100'"
-     @click="openImage(chat.avatar)"
-     class="w-24 h-24 rounded-full mx-auto mb-3 object-cover cursor-pointer">
+<!-- HEADER FIX -->
+<div class="p-4 flex items-center gap-3 bg-gradient-to-r from-purple-600 to-purple-500">
 
-  <div>
-    <p class="font-semibold cursor-pointer"
-      @click="showProfile=true">
+  <!-- BACK -->
+  <button onclick="history.back()" class="text-xl">←</button>
+
+  <!-- AVATAR -->
+  <img :src="chat.avatar || 'https://i.pravatar.cc/40'"
+       @click="showProfile=true"
+       class="w-10 h-10 rounded-full object-cover cursor-pointer">
+
+  <!-- INFO -->
+  <div class="flex-1">
+    <p class="font-semibold leading-tight">
       {{chat.name || chat.email}}
     </p>
 
-    <!-- 🔥 ONLINE STATUS -->
     <p class="text-xs opacity-70">
       {{ onlineUsers.includes(chat.email) ? 'online' : 'offline' }}
     </p>
   </div>
+
 </div>
 
 <!-- CHAT AREA -->

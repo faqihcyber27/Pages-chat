@@ -75,7 +75,7 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
     </p>
 
     <p class="text-xs opacity-70">
-      <span v-if="onlineUsers.includes(chat.email)">
+      <span v-if="onlineUsers.some(u => u.user === chat.email)">
         online
       </span>
       <span v-else>
@@ -198,6 +198,13 @@ lastSeenMap:{}
 },
 
 async mounted(){
+  setInterval(()=>{
+  const now = Date.now()
+
+  this.onlineUsers = this.onlineUsers.filter(u => {
+    return (now - u.time) < 5000
+  })
+},2000)
 
 this.user = JSON.parse(localStorage.getItem("user"))
 this.chat = JSON.parse(localStorage.getItem("activeChat"))
@@ -236,7 +243,7 @@ setInterval(()=>{
       user:this.user.email
     }))
   }
-},3000)
+},2000)
 
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
@@ -268,10 +275,16 @@ this.ws.onmessage = (e)=>{
 
   // ===== ONLINE =====
   if(msg.type==="online"){
-  this.onlineUsers = this.onlineUsers.filter(u => u !== msg.user)
-  this.onlineUsers.push(msg.user)
+  const now = Date.now()
+
+  this.onlineUsers = this.onlineUsers.filter(u => u.user !== msg.user)
+
+  this.onlineUsers.push({
+    user: msg.user,
+    time: now
+  })
+
   this.lastSeenMap[msg.user] = msg.last_seen
-  }
 }
 
 // HYBRID FIX
@@ -325,7 +338,7 @@ sendFile(e){
 },
 
 formatLastSeen(time){
-  if(!time) return ''
+  if(!time) return 'offline'
 
   const diff = Math.floor((Date.now() - new Date(time)) / 1000)
 

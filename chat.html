@@ -260,17 +260,16 @@ this.ws.onmessage = (e)=>{
 
     if(msg.sender === this.user.email) return
 
-    // 🔥 FIX DUPLICATE + SUPPORT FILE
     const last = this.messages[this.messages.length - 1]
     if(!last || (last.text !== msg.text && last.file !== msg.file)){
-    this.messages.push(msg)
-  }
+      this.messages.push(msg)
+    }
 
     requestAnimationFrame(()=>{
       this.scrollBottom()
     })
   }
-} 
+
   // ===== TYPING =====
   if(msg.type === "typing" && msg.sender !== this.user.email){
     this.typingUser = msg.name
@@ -282,17 +281,19 @@ this.ws.onmessage = (e)=>{
 
   // ===== ONLINE =====
   if(msg.type==="online"){
-  const now = Date.now()
+    const now = Date.now()
 
-  this.onlineUsers = this.onlineUsers.filter(u => u.user !== msg.user)
+    this.onlineUsers = this.onlineUsers.filter(u => u.user !== msg.user)
 
-  this.onlineUsers.push({
-    user: msg.user,
-    time: now
-  })
+    this.onlineUsers.push({
+      user: msg.user,
+      time: now
+    })
 
-  this.lastSeenMap[msg.user] = msg.last_seen
-}
+    this.lastSeenMap[msg.user] = msg.last_seen
+  }
+
+} // ✅ TUTUP DI SINI (PALING BAWAH)
 
 methods:{
 

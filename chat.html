@@ -352,7 +352,7 @@ sendFile(e){
       sender:this.user.email,
       file:reader.result,
       file_type:file.type,
-      created_at: new.Date().toISOString()
+      created_at: new Date().toISOString()
     }
 
     this.ws.send(JSON.stringify(payload))
@@ -370,7 +370,7 @@ send(){
     room:this.room,
     sender:this.user.email,
     text:this.text,
-    created_at: new.Date().toISOString()
+    created_at: new Date().toISOString()
   }
 
   this.ws.send(JSON.stringify(msg))

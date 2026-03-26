@@ -295,13 +295,6 @@ if(msg.type==="read"){
 
 },
 
-unmounted(){
-  const el = this.$refs.chatBox
-  if(el && this._onScroll){
-    el.removeEventListener("scroll", this._onScroll)
-  }
-},
-
 methods:{
 markAsRead(){
   fetch(API+"/mark-read",{

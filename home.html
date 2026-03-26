@@ -808,16 +808,14 @@ this.ws.onopen = ()=>{
         user:this.user.email
       }))
     }
-  }, 15000) // 15 detik
+  }, 5000) // 5 detik
 }
 
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  if(msg.type==="online"){
-    if(!this.onlineUsers.includes(msg.user)){
-      this.onlineUsers = msg.user
-    }
+  if(msg.type === "online_list"){
+    this.onlineUsers = msg.users || []
   }
 
   if(msg.type==="typing"){

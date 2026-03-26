@@ -233,7 +233,7 @@ this.ws.onopen = () => {
 
 // ONLINE PING
 setInterval(()=>{
-  if(this.ws && this.ws.readyState===1){
+  if(this.ws.readyState===1){
     this.ws.send(JSON.stringify({
       type:"online",
       user:this.user.email
@@ -293,7 +293,7 @@ if(msg.type==="read"){
   }
 }
 
-},
+}, // ✅ PENTING
 
 methods:{
 markAsRead(){
@@ -329,15 +329,6 @@ async loadUserProfile(){
     this.chat.name = found.friend_name
     this.chat.bio = found.friend_bio
   }
-},
-
-scrollBottom(force=false){
-  this.$nextTick(()=>{
-    const el = this.$refs.chatBox
-    if(!el) return
-
-    el.scrollTop = el.scrollHeight
-  })
 },
 
 async syncMessages(){

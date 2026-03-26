@@ -75,29 +75,32 @@ body {background:#020617;color:white;}
           </span>
 
           <!-- ONLINE DOT -->
-          <span v-if="onlineUsers.includes(getFriendEmail(c))"
-          class="w-2 h-2 bg-green-400 rounded-full"></span>
 
             <span v-if="onlineUsers.includes(c.friend_email)"
               class="w-2 h-2 bg-green-400 rounded-full"></span>
           </p>
 
-          <!-- 🔥 MESSAGE / TYPING -->
           <p class="text-sm truncate max-w-[180px]"
-   :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-50'">
+   :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-50'">
 
   <!-- TYPING -->
   <span v-if="typingUsers[getFriendEmail(c)]">
     sedang mengetik...
   </span>
 
-  <!-- 📷 FOTO PRIORITAS -->
-  <span v-else-if="c.last_file_type && c.last_file_type.includes('image')">
+  <!-- 📷 FOTO -->
+  <span v-else-if="
+    (c.last_file_type && c.last_file_type.includes('image')) ||
+    c.last_message === '📷 Foto'
+  ">
     📷 Foto
   </span>
 
   <!-- 📎 FILE -->
-  <span v-else-if="c.last_file_type">
+  <span v-else-if="
+    c.last_file_type ||
+    c.last_message === '📎 File'
+  ">
     📎 File
   </span>
 
@@ -106,14 +109,17 @@ body {background:#020617;color:white;}
     {{c.last_message}}
   </span>
 
+  <!-- DEFAULT -->
   <span v-else>
     No message
   </span>
 
 </p>
 
-          </p>
-
+<!-- 🔥 DEBUG (tetap di luar p, ini benar) -->
+<pre class="text-xs text-gray-400">
+{{c.last_message}} | {{c.last_file_type}}
+</pre>
         </div>
 
       </div>

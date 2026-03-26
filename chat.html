@@ -208,10 +208,15 @@ this.ws.onmessage = (e)=>{
     }
   }
 
-  if(msg.type==="typing"){
-    this.typingUser = msg.name
-    setTimeout(()=> this.typingUser='',1500)
-  }
+  if(msg.type === "typing"){
+  if(msg.sender === this.user.email) return  // 🚫 blok diri sendiri
+
+  this.typingUser = msg.name
+
+  setTimeout(()=>{
+    this.typingUser = ''
+  },1500)
+}
 
   if(msg.type==="online"){
     const now = Date.now()

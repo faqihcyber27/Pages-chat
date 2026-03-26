@@ -567,7 +567,9 @@ c.unread = 0
 
 localStorage.setItem("activeChat", JSON.stringify({
   email: c.friend_email,
-  name: c.friend_name
+  name: c.friend_name,
+  avatar: c.friend_avatar,
+  bio: c.friend_bio
 }))
 
 window.location.href="chat.html"

@@ -771,7 +771,7 @@ this.ws.onmessage = (e)=>{
 
   if(msg.type==="online"){
     if(!this.onlineUsers.includes(msg.user)){
-      this.onlineUsers.push(msg.user)
+      this.onlineUsers = msg.user
     }
   }
 

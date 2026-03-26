@@ -202,6 +202,10 @@ this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
   if(msg.type==="message"){
+
+  // 🔥 skip message sendiri (biar ga double)
+  if(msg.sender === this.user.email) return
+
   this.messages.push(msg)
   this.scrollBottom()
 }

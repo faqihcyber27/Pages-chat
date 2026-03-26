@@ -279,11 +279,26 @@ setInterval(()=>{
   }
 },1500)
 
-// CLEAN ONLINE
-setInterval(()=>{
-  const now = Date.now()
-  this.onlineUsers = this.onlineUsers.filter(u => now - u.time < 5000)
-},2000)
+// 🔥 GLOBAL WS (UNTUK ONLINE)
+this.wsGlobal = new WebSocket(
+  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
+)
+
+this.wsGlobal.onopen = ()=>{
+  this.wsGlobal.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
+}
+
+// 🔥 LISTENER ONLINE
+this.wsGlobal.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  if(msg.type === "online_list"){
+    this.onlineUsers = msg.users || []
+  }
+}
 
 // WS LISTENER
 this.ws.onmessage = (e)=>{
@@ -311,17 +326,14 @@ if(msg.type==="read"){
 }
 
   if(msg.type === "typing"){
-  if(msg.sender === this.user.email) return  // 🚫 blok diri sendiri
-
-  this.typingUser = msg.name
-
-  setTimeout(()=>{
-    this.typingUser = ''
-  },1500)
-}
-
-  if(msg.type === "online_list"){
-    this.onlineUsers = msg.users || []
+    if(msg.sender === this.user.email) return
+    // 🔥 FILTER ROOM
+    if(msg.room !== this.room) return
+    this.typingUser = msg.name
+    clearTimeout(this.typingTimeout)
+    this.typingTimeout = setTimeout(()=>{
+      this.typingUser = ''
+    },1500)
   }
   
 }
@@ -394,6 +406,7 @@ sendTyping(){
   if(this.ws.readyState===1){
     this.ws.send(JSON.stringify({
       type:"typing",
+      room:this.room,
       sender:this.user.email,
       name:this.user.name
     }))

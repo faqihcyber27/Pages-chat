@@ -28,6 +28,21 @@ html {
   pointer-events:none;
 }
 
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease;
+}
+
 body {
   background: linear-gradient(180deg, #0f172a, #020617);
   color: white;
@@ -65,8 +80,6 @@ body::before {
   box-shadow: 0 4px 15px rgba(0,0,0,0.2);
 }
 
-.me { background: #7c3aed; }
-.them { background: rgba(255,255,255,0.08); }
 </style>
 </head>
 
@@ -83,25 +96,70 @@ body::before {
 
 <!-- PROFILE -->
 <div v-if="showProfile"
-class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
-@click="showProfile=false">
+  class="fixed inset-0 z-50 flex flex-col items-center justify-between
+  bg-gradient-to-b from-black/80 via-[#020617]/95 to-black/90
+  backdrop-blur-xl animate-fadeIn"
+  
+  @click="showProfile=false"
 
-  <div @click.stop
-       class="bg-[#020617] p-6 rounded-2xl text-center w-80">
+  @touchstart="touchStartY = $event.touches[0].clientY"
+  @touchmove="handleSwipe($event)"
+>
 
-    <img :src="chat.avatar || 'https://i.pravatar.cc/150'"
-         @click="openImage(chat.avatar)"
-         class="w-32 h-32 rounded-full mx-auto mb-4 object-cover">
+  <!-- TOP AREA -->
+  <div class="w-full pt-16 flex flex-col items-center">
 
-    <p class="text-xl font-semibold">
+    <!-- AVATAR GLOW -->
+    <div class="relative">
+      <div class="absolute inset-0 rounded-full blur-2xl bg-purple-500/40"></div>
+
+      <img :src="chat.avatar || defaultAvatar"
+        class="w-40 h-40 rounded-full object-cover relative z-10
+        ring-4 ring-white/10 shadow-2xl">
+    </div>
+
+    <!-- NAME -->
+    <p class="text-2xl font-bold mt-4 tracking-wide">
       {{chat.name || chat.email}}
     </p>
 
+    <!-- STATUS -->
     <p class="text-sm opacity-70 mt-2">
       {{chat.bio || 'Available'}}
     </p>
 
+    <!-- ONLINE -->
+    <p class="text-xs mt-2">
+      <span v-if="onlineUsers.includes(chat.email)"
+        class="text-green-400">● Online</span>
+      <span v-else>
+        {{ formatLastSeen(lastSeenMap[chat.email]) }}
+      </span>
+    </p>
+
   </div>
+
+  <!-- ACTION BUTTON -->
+  <div class="w-full px-6 pb-10 flex gap-4">
+
+    <!-- CHAT -->
+    <button @click.stop="showProfile=false"
+      class="flex-1 py-3 rounded-2xl
+      bg-gradient-to-r from-purple-600 to-indigo-500
+      shadow-lg active:scale-95 transition">
+      💬 Chat
+    </button>
+
+    <!-- CALL -->
+    <button @click.stop="alert('Coming soon')"
+      class="flex-1 py-3 rounded-2xl
+      bg-white/10 backdrop-blur border border-white/10
+      active:scale-95 transition">
+      📞 Call
+    </button>
+
+  </div>
+
 </div>
 
 <!-- HEADER -->
@@ -224,6 +282,7 @@ return{
   defaultAvatar: "https://ui-avatars.com/api/?name=User&background=7c3aed&color=fff",
 user:{},
 chat:{},
+touchStartY: 0,
 messages:[],
 readMap:{},
 deliveredMap:{},
@@ -368,6 +427,14 @@ formatTime(t){
   const m = d.getMinutes().toString().padStart(2,'0')
 
   return h + ':' + m
+},
+
+handleSwipe(e){
+  const currentY = e.touches[0].clientY
+
+  if(currentY - this.touchStartY > 100){
+    this.showProfile = false
+  }
 },
 
 toggleEmoji(){

@@ -57,7 +57,7 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
 
   <button onclick="history.back()">←</button>
 
-  <img :src="chat.avatar || 'https://i.pravatar.cc/40'"
+  <img :src="chat.avatar || defaultAvatar"
        @click="showProfile=true"
        class="w-10 h-10 rounded-full">
 
@@ -147,6 +147,7 @@ Vue.createApp({
 
 data(){
 return{
+  defaultAvatar: "https://ui-avatars.com/api/?name=User&background=7c3aed&color=fff",
 user:{},
 chat:{},
 messages:[],
@@ -167,12 +168,25 @@ async mounted(){
 
 this.user = JSON.parse(localStorage.getItem("user") || "{}")
 this.chat = JSON.parse(localStorage.getItem("activeChat") || "{}")
+await this.loadUserProfile
+if(!this.chat.avatar){
+  this.chat.avatar = this.defaultAvatar
+}
+
 this.syncMessages()
-setInterval(()=>this.syncMessages(),2000)
+setInterval(()=>{
+  if(!this.ws || this.ws.readyState !== 1){
+    this.syncMessages()
+  }
+},5000)
 
 if(!this.chat.email){
   alert("Chat tidak valid")
   return
+}
+
+if(!this.chat.avatar){
+  this.chat.avatar = this.defaultAvatar
 }
 
 this.room = [this.user.email, this.chat.email].sort().join("_")
@@ -245,6 +259,25 @@ methods:{
 toggleEmoji(){
   this.showEmoji=!this.showEmoji
 },
+async loadUserProfile(){
+  const res = await fetch(API + "/chats?email=" + this.user.email)
+  const data = await res.json()
+
+  const found = data.find(c => c.friend_email === this.chat.email)
+
+  if(found){
+    this.chat.avatar = found.friend_avatar
+    this.chat.name = found.friend_name
+    this.chat.bio = found.friend_bio
+  }
+},
+
+async syncMessages(){
+  const res = await fetch(API+"/messages?room="+this.room)
+  this.messages = await res.json()
+
+  this.scrollBottom(true) // 🔥 WAJIB
+},
 
 addEmoji(e){
   this.text+=e
@@ -315,14 +348,25 @@ formatLastSeen(t){
 },
 
 async syncMessages(){
-  const res=await fetch(API+"/messages?room="+this.room)
-  this.messages=await res.json()
-},
+  const res = await fetch(API+"/messages?room="+this.room)
+  this.messages = await res.json()
 
-scrollBottom(){
+  this.scrollBottom(true) // 🔥 WAJIB
+}
+
+scrollBottom(force=false){
   this.$nextTick(()=>{
-    const el=this.$refs.chatBox
-    el.scrollTop=el.scrollHeight
+    const el = this.$refs.chatBox
+
+    const isNearBottom =
+      el.scrollHeight - el.scrollTop - el.clientHeight < 100
+
+    if(isNearBottom || force){
+      el.scrollTo({
+        top: el.scrollHeight,
+        behavior:"smooth"
+      })
+    }
   })
 }
 

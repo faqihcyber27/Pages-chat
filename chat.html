@@ -9,10 +9,62 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-body {
-  background: radial-gradient(circle at top, #0f172a, #020617);
-  color: white;
+
+/* smooth scroll feel */
+html {
+  scroll-behavior: smooth;
 }
+
+/* bubble hover */
+.me:hover, .them:hover {
+  transform: scale(1.02);
+}
+
+.header-glow::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background: radial-gradient(circle at top left, rgba(255,255,255,0.2), transparent 60%);
+  pointer-events:none;
+}
+
+body {
+  background: linear-gradient(180deg, #0f172a, #020617);
+  color: white;
+  position: relative;
+}
+
+/* subtle pattern */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 25px 25px;
+  pointer-events: none;
+}
+
+.msg-enter {
+  opacity: 0;
+  transform: translateY(10px);
+  animation: msgIn 0.3s ease forwards;
+}
+
+@keyframes msgIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.me {
+  box-shadow: 0 6px 20px rgba(124,58,237,0.4);
+}
+
+.them {
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
 .me { background: #7c3aed; }
 .them { background: rgba(255,255,255,0.08); }
 </style>
@@ -53,13 +105,15 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
 </div>
 
 <!-- HEADER -->
-<div class="p-4 flex items-center gap-3 bg-purple-600">
+<div class="header-glow relative p-4 flex items-center gap-3 
+  bg-gradient-to-r from-purple-600/80 via-indigo-500/70 to-pink-500/80
+  backdrop-blur-xl border-b border-white/10 shadow-lg">
 
   <button onclick="history.back()">←</button>
 
   <img :src="chat.avatar || defaultAvatar"
        @click="showProfile=true"
-       class="w-10 h-10 rounded-full">
+       class="w-11 h-11 rounded-full object-cover ring-2 ring-white/20 shadow-md">
 
   <div class="flex-1">
     <p class="font-semibold">
@@ -67,9 +121,8 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
     </p>
 
     <p class="text-xs opacity-70">
-      <span v-if="onlineUsers.some(u => u.user === chat.email)">
-        online
-      </span>
+      <span v-if="onlineUsers.includes(chat.email)"
+        class="text-green-400">● online</span>
       <span v-else>
         {{ formatLastSeen(lastSeenMap[chat.email]) }}
       </span>
@@ -80,15 +133,17 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
 
 <!-- CHAT -->
 <div ref="chatBox"
-     class="flex-1 overflow-auto p-3 space-y-2">
+     class="flex-1 overflow-auto px-3 py-4 space-y-3 pb-24">
 
   <div v-for="(m,i) in messages"
        :key="i"
        :class="m.sender===user.email ? 'flex justify-end' : 'flex'">
 
     <div :class="[
-      'px-4 py-2 rounded-2xl max-w-[70%]',
-      m.sender===user.email ? 'me' : 'them'
+      'msg-enter',
+      'px-4 py-3 rounded-3xl max-w-[75%] shadow-md transition-all duration-300', m.sender===user.email
+    ? 'bg-gradient-to-br from-purple-600 to-indigo-500 text-white shadow-purple-500/30'
+    : 'bg-white/10 backdrop-blur text-white border border-white/10'
     ]">
 
       <div v-if="m.file">
@@ -115,12 +170,23 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
 </div>
 
 <!-- TYPING -->
-<div v-if="typingUser" class="text-xs px-3 pb-2 opacity-60">
-  {{typingUser}} is typing...
+<div v-if="typingUser"
+  class="text-xs px-4 pb-2 text-green-400 flex items-center gap-1">
+
+  <span>{{typingUser}}</span>
+
+  <span class="flex gap-1">
+    <span class="w-1 h-1 bg-green-400 rounded-full animate-bounce"></span>
+    <span class="w-1 h-1 bg-green-400 rounded-full animate-bounce delay-100"></span>
+    <span class="w-1 h-1 bg-green-400 rounded-full animate-bounce delay-200"></span>
+  </span>
+
 </div>
 
 <!-- INPUT -->
-<div class="p-3 flex gap-2 bg-black/40">
+<div class="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%]
+  flex gap-2 px-3 py-2 rounded-2xl
+  bg-white/10 backdrop-blur-xl border border-white/10 shadow-lg">
 
   <input type="file" hidden ref="file" @change="sendFile">
   <button @click="$refs.file.click()">📎</button>
@@ -130,9 +196,12 @@ class="fixed inset-0 bg-black/90 flex items-start justify-center pt-32 z-50"
   <input v-model="text"
          @input="sendTyping"
          @keyup.enter="send"
-         class="flex-1 px-4 py-2 rounded-full bg-white/10">
+         class="flex-1 px-4 py-2 rounded-full bg-white/10 backdrop-blur outline-none focus:ring-2 focus:ring-purple-500">
 
-  <button v-if="text" @click="send">➤</button>
+   <button v-if="text" @click="send"
+    class="bg-gradient-to-r from-purple-600 to-indigo-500 px-4 rounded-full shadow-md active:scale-95 transition">
+      ➤
+    </button>
 
 </div>
 
@@ -251,18 +320,10 @@ if(msg.type==="read"){
   },1500)
 }
 
-  if(msg.type==="online"){
-    const now = Date.now()
-
-    this.onlineUsers = this.onlineUsers.filter(u => u.user !== msg.user)
-
-    this.onlineUsers.push({
-      user: msg.user,
-      time: now
-    })
-
-    this.lastSeenMap[msg.user] = msg.last_seen
+  if(msg.type === "online_list"){
+    this.onlineUsers = msg.users || []
   }
+  
 }
 
 }, // ✅ PENTING

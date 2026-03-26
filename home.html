@@ -764,6 +764,14 @@ this.ws.onopen = ()=>{
     type:"online",
     user:this.user.email
   }))
+  this.heartbeat = setInterval(()=>{
+    if(this.ws.readyState === 1){
+      this.ws.send(JSON.stringify({
+        type:"online",
+        user:this.user.email
+      }))
+    }
+  }, 15000) // 15 detik
 }
 
 this.ws.onmessage = (e)=>{

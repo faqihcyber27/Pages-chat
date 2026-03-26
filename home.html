@@ -61,7 +61,7 @@ body {background:#020617;color:white;}
       <!-- LEFT -->
       <div class="flex items-center gap-3">
 
-        <img :src="(c.friend_avatar || 'https://i.pravatar.cc/40') + '?t=' + c.updated_at"
+        <img :src="c.avatar || 'https://i.pravatar.cc/40'"
           class="w-10 h-10 rounded-full">
 
         <div>
@@ -152,8 +152,8 @@ body {background:#020617;color:white;}
          @touchend="cancelPress"
          class="glass p-3 mb-3 rounded-xl flex items-center gap-3">
 
-        <img 
-          :src="(c.friend_avatar || 'https://i.pravatar.cc/40') + '?t=' + c.updated_at" class="w-10 h-10 rounded-full">
+      <img :src="c.avatar || 'https://i.pravatar.cc/40'"
+        class="w-10 h-10 rounded-full">
 
       <p class="font-medium">{{c.name}}</p>
 
@@ -319,8 +319,8 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
      @click="startChat(c)"
      class="flex items-center gap-3 p-2 rounded hover:bg-white/10 cursor-pointer">
 
-  <img 
-    :src="(c.friend_avatar || 'https://i.pravatar.cc/40') + '?t=' + c.updated_at" class="w-10 h-10 rounded-full">
+  <img :src="c.avatar || 'https://i.pravatar.cc/40'"
+     class="w-10 h-10 rounded-full">
 
   <p>{{c.name}}</p>
 

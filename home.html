@@ -144,6 +144,73 @@ body {background:#020617;color:white;}
   z-index: -1;
 }
 
+/* 💎 MODAL GLASS */
+.glass-card {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+
+  border: 1px solid rgba(255,255,255,0.1);
+
+  box-shadow:
+    0 20px 50px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+
+  border-radius: 20px;
+}
+
+/* ✨ ANIMASI MASUK */
+@keyframes modalIn {
+  0% {
+    transform: scale(0.8) translateY(30px);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-modal {
+  animation: modalIn 0.3s ease;
+}
+
+/* 👆 ITEM INTERACTION */
+.start-item {
+  transition: 0.25s;
+  background: rgba(255,255,255,0.03);
+}
+
+.start-item:hover {
+  transform: scale(1.03);
+  background: rgba(255,255,255,0.08);
+}
+
+.start-item:active {
+  transform: scale(0.97);
+}
+
+/* 🔥 GLOW HALUS */
+.start-item::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(circle, rgba(124,58,237,0.2), transparent 70%);
+  opacity: 0;
+  transition: 0.3s;
+}
+
+.start-item:hover::after {
+  opacity: 1;
+}
+
+/* IMPORTANT */
+.start-item {
+  position: relative;
+  overflow: hidden;
+}
+
 .active {color:#a78bfa;}
 </style>
 </head>
@@ -490,11 +557,12 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
 <div class="glass p-5 rounded-xl w-80 max-h-[400px] overflow-auto">
 
-<h2 class="mb-3">Start Chat</h2>
+<h2 class="mb-4 text-lg font-semibold tracking-wide">Start Chat
+</h2>
 
 <div v-for="c in contacts"
      @click="startChat(c)"
-     class="flex items-center gap-3 p-2 rounded hover:bg-white/10 cursor-pointer">
+     class="start-item flex items-center gap-3 p-3 rounded-xl cursor-pointer">
 
   <img :src="c.avatar || 'https://i.pravatar.cc/40'"
      class="w-10 h-10 rounded-full">
@@ -504,7 +572,7 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
 </div>
 
 <button @click="showSelectChat=false"
-class="mt-3 w-full bg-gray-600 p-2 rounded">
+class="mt-4 w-full py-2 rounded-xl bg-white/10 backdrop-blur hover:bg-white/20 transition">
 Close
 </button>
 

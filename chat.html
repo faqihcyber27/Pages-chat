@@ -256,8 +256,7 @@ this.ws.onmessage = (e)=>{
   const last = this.messages[this.messages.length - 1]
 
   // 🔥 anti duplicate
-  if(!last || last.created_at !== msg.created_at){
-    msg.created_at = new Date().toISOString()
+    if(!last || last.created_at !== msg.created_at){
     this.messages.push(msg)
     this.scrollBottom()
   }

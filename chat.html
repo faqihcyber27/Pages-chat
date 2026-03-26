@@ -168,7 +168,7 @@ async mounted(){
 
 this.user = JSON.parse(localStorage.getItem("user") || "{}")
 this.chat = JSON.parse(localStorage.getItem("activeChat") || "{}")
-await this.loadUserProfile
+await this.loadUserProfile()
 if(!this.chat.avatar){
   this.chat.avatar = this.defaultAvatar
 }
@@ -346,13 +346,6 @@ formatLastSeen(t){
 
   return new Date(t).toLocaleDateString()
 },
-
-async syncMessages(){
-  const res = await fetch(API+"/messages?room="+this.room)
-  this.messages = await res.json()
-
-  this.scrollBottom(true) // 🔥 WAJIB
-}
 
 scrollBottom(force=false){
   this.$nextTick(()=>{

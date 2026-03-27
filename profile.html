@@ -3,34 +3,150 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body {
+  background: linear-gradient(180deg, #020617, #020617, #020617);
+  color: white;
+}
+
+/* 🔥 HEADER GRADIENT */
+.profile-header {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
+  border-radius: 20px;
+  padding: 30px 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+/* glow */
+.profile-header::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 60%);
+}
+
+/* avatar */
+.avatar {
+  border: 2px solid rgba(255,255,255,0.2);
+  box-shadow: 0 10px 25px rgba(124,58,237,0.5);
+}
+
+/* glass input */
+.input-glass {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  transition: 0.3s;
+}
+
+.input-glass:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 15px rgba(124,58,237,0.4);
+}
+
+/* button gradient */
+.btn-primary {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
+  box-shadow: 0 10px 25px rgba(124,58,237,0.4);
+  transition: 0.25s;
+}
+
+.btn-primary:hover {
+  transform: scale(1.03);
+}
+
+/* logout */
+.btn-danger {
+  background: rgba(255,0,0,0.15);
+  border: 1px solid rgba(255,0,0,0.3);
+  transition: 0.25s;
+}
+
+.btn-danger:hover {
+  background: rgba(255,0,0,0.3);
+}
+
+/* edit button */
+.edit-btn {
+  position:absolute;
+  bottom:0;
+  right:0;
+  background: rgba(255,255,255,0.15);
+  backdrop-filter: blur(10px);
+  padding:6px;
+  border-radius:50%;
+}
+</style>
 </head>
 
-<body class="bg-[#020617] text-white">
+<body>
 
 <div id="app" class="p-4">
 
-<h1 class="text-xl mb-4">Profile</h1>
+<!-- HEADER -->
+<div class="profile-header text-center">
 
-<img :src="user.avatar || 'https://i.pravatar.cc/150'"
-class="w-24 h-24 rounded-full mb-4">
+  <div class="relative inline-block">
 
-<input v-model="user.name"
-class="w-full p-2 mb-2 bg-white/10 rounded">
+    <img :src="user.avatar || 'https://i.pravatar.cc/150'"
+    class="w-28 h-28 rounded-full object-cover avatar">
 
-<textarea v-model="user.bio"
-class="w-full p-2 mb-2 bg-white/10 rounded"></textarea>
+    <!-- upload -->
+    <input type="file" ref="fileInput" @change="uploadAvatar" class="hidden">
 
-<button @click="saveProfile"
-class="bg-purple-600 w-full p-2 rounded mb-3">
-Save
-</button>
+    <button @click="$refs.fileInput.click()" class="edit-btn">
+      ✏️
+    </button>
 
-<button @click="logout"
-class="bg-red-500 w-full p-2 rounded">
-Logout
-</button>
+  </div>
+
+  <h2 class="mt-3 text-lg font-semibold">
+    {{user.name}}
+  </h2>
+
+  <p class="text-sm opacity-70">
+    {{user.bio || 'No bio yet'}}
+  </p>
+
+</div>
+
+<!-- FORM -->
+<div class="mt-6 space-y-4">
+
+  <div>
+    <label class="text-xs opacity-60 ml-1">Name</label>
+    <input v-model="user.name"
+      class="input-glass w-full p-3 mt-1 rounded-xl outline-none">
+  </div>
+
+  <div>
+    <label class="text-xs opacity-60 ml-1">Bio</label>
+    <textarea v-model="user.bio"
+      class="input-glass w-full p-3 mt-1 rounded-xl outline-none">
+    </textarea>
+  </div>
+
+</div>
+
+<!-- BUTTON -->
+<div class="mt-6 space-y-3">
+
+  <button @click="saveProfile"
+    class="btn-primary w-full py-3 rounded-xl font-semibold">
+    Save Changes
+  </button>
+
+  <button @click="logout"
+    class="btn-danger w-full py-3 rounded-xl font-semibold">
+    Logout
+  </button>
+
+</div>
 
 </div>
 
@@ -38,7 +154,7 @@ Logout
 const API="https://worker-chat.jihadwajib68.workers.dev"
 
 if(!localStorage.getItem("user")){
-parent.location.href="index.html"
+  parent.location.href="index.html"
 }
 
 Vue.createApp({
@@ -49,21 +165,34 @@ user: JSON.parse(localStorage.getItem("user"))
 },
 
 methods:{
-async saveProfile(){
-await fetch(API+"/update-profile",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify(this.user)
-})
 
-localStorage.setItem("user", JSON.stringify(this.user))
-alert("Saved")
+async uploadAvatar(e){
+  const file = e.target.files[0]
+  if(!file) return
+
+  const reader = new FileReader()
+  reader.onload = ()=>{
+    this.user.avatar = reader.result
+  }
+  reader.readAsDataURL(file)
+},
+
+async saveProfile(){
+  await fetch(API+"/update-profile",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify(this.user)
+  })
+
+  localStorage.setItem("user", JSON.stringify(this.user))
+  alert("Profile updated")
 },
 
 logout(){
-localStorage.removeItem("user")
-parent.location.href="index.html"
+  localStorage.removeItem("user")
+  parent.location.href="index.html"
 }
+
 }
 
 }).mount("#app")

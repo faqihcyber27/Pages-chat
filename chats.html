@@ -15,9 +15,8 @@ body {background:#020617;color:white;}
   backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.08);
   transition: 0.3s;
-  -webkit-touch-callout: none;
-  -webkit-user-select: none;
-  user-select: none;
+  -webkit-user-select:none;
+  user-select:none;
 }
 .chat-card:hover {transform: scale(1.02);}
 
@@ -59,9 +58,9 @@ body {background:#020617;color:white;}
      @scroll="cancelPress">
 
   <div v-for="c in normalChats"
-     @click="openChat(c)"
+     @click="handleClick(c)"
      @touchstart="startPress(c, $event)"
-     @touchend="cancelPress"
+     @touchend="endPress"
      @touchmove="cancelPress"
      class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
 
@@ -90,17 +89,6 @@ body {background:#020617;color:white;}
 
           <span v-if="typingUsers[c.friend_email]">
             sedang mengetik...
-          </span>
-
-          <span v-else-if="
-            (c.last_file_type && c.last_file_type.includes('image')) ||
-            c.last_message === '📷 Foto'
-          ">
-            📷 Foto
-          </span>
-
-          <span v-else-if="c.last_file_type || c.last_message === '📎 File'">
-            📎 File
           </span>
 
           <span v-else-if="c.last_message">
@@ -177,6 +165,7 @@ onlineUsers:[],
 typingUsers:{},
 selectedChat:null,
 pressTimer:null,
+isLongPress:false,
 wsRooms:{},
 wsGlobal:null,
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
@@ -195,6 +184,7 @@ normalChats(){
 mounted(){
 
 this.selectedChat = null
+this.isLongPress = false
 
 this.loadChats().then(()=>{
   this.initRoomSockets()
@@ -224,46 +214,39 @@ this.wsGlobal.onmessage = (e)=>{
 
 methods:{
 
-togglePin(c){
-  const i = this.pinned.indexOf(c.friend_email)
-  if(i>-1) this.pinned.splice(i,1)
-  else this.pinned.push(c.friend_email)
-
-  localStorage.setItem("pinned", JSON.stringify(this.pinned))
+// ================= CLICK CONTROL =================
+handleClick(c){
+  if(this.isLongPress){
+    this.isLongPress = false
+    return
+  }
+  this.openChat(c)
 },
 
-isPinned(email){
-  return this.pinned.includes(email)
-},
-
-// 🔥 FIX LONG PRESS
+// ================= LONG PRESS FIX =================
 startPress(c, e){
 
   if(!e || !e.touches || e.touches.length !== 1) return
 
-  this.cancelPress()
+  this.isLongPress = false
 
   this.pressTimer = setTimeout(()=>{
+    this.isLongPress = true
     this.selectedChat = c
     navigator.vibrate?.(50)
   },700)
 },
 
-cancelPress(){
-  if(this.pressTimer){
-    clearTimeout(this.pressTimer)
-    this.pressTimer = null
-  }
+endPress(){
+  clearTimeout(this.pressTimer)
 },
 
+cancelPress(){
+  clearTimeout(this.pressTimer)
+},
+
+// ================= DELETE =================
 async deleteChat(){
-
-  const room = [this.user.email,this.selectedChat.friend_email].sort().join("_")
-
-  if(this.wsRooms[room]){
-    this.wsRooms[room].close()
-    delete this.wsRooms[room]
-  }
 
   await fetch(API+"/delete-chat",{
     method:"POST",
@@ -281,6 +264,7 @@ async deleteChat(){
   this.selectedChat = null
 },
 
+// ================= SOCKET =================
 initRoomSockets(){
 
 this.chats.forEach(c=>{
@@ -339,40 +323,15 @@ this.wsRooms[room]=ws
 },
 
 async loadChats(){
-
 const res = await fetch(API+"/chats?email="+this.user.email)
-const newChats = await res.json()
-
-const map = new Map()
-
-this.chats.forEach(c=> map.set(c.friend_email,c))
-
-newChats.forEach(c=>{
-  map.set(c.friend_email,{
-    ...map.get(c.friend_email),
-    ...c
-  })
-})
-
-this.chats = Array.from(map.values())
-
+this.chats = await res.json()
 },
 
 openChat(c){
-
-const room = [this.user.email,c.friend_email].sort().join("_")
-
-fetch(API+"/mark-read",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({room,user:this.user.email})
-})
-
 localStorage.setItem("activeChat", JSON.stringify({
   email:c.friend_email,
   name:c.friend_name
 }))
-
 location.href="chat.html"
 },
 

@@ -315,6 +315,26 @@ this.ws.onmessage = (e)=>{
     }))
     return
   }
+  
+  // 🔥 REALTIME PROFILE UPDATE
+  if(msg.type==="profile_update"){
+
+  const u = msg.user
+
+  this.contacts = this.contacts.map(c=>{
+    if(c.email === u.email){
+      return {
+        ...c,
+        name: u.name,
+        avatar: u.avatar,
+        bio: u.bio
+      }
+    }
+    return c
+  })
+
+  return
+}
 
   // ================= ONLINE =================
   if(msg.type==="online_list"){

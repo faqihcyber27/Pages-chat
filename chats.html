@@ -221,7 +221,7 @@ this.wsGlobal.onmessage = (e)=>{
 
   // MESSAGE REALTIME
   if(msg.type==="message"){
-
+    const messageText = msg.text || "📎 File"
     let friend
 
     if(msg.sender === this.user.email){
@@ -234,12 +234,14 @@ this.wsGlobal.onmessage = (e)=>{
     const chat = this.chats.find(c=>c.friend_email===friend)
 
     if(chat){
-      chat.last_message = msg.text || "📎 File"
-      chat.updated_at = msg.created_at
-
-      if(msg.sender !== this.user.email){
-        chat.unread = (chat.unread||0)+1
+      if(
+        chat.last_message === messageText &&
+        Math.abs(new Date(chat.updated_at) - new Date(msg.created_at)) < 1000
+      ){
+        return
       }
+      chat.last_message = messageText
+      chat.updated_at = msg.created_at
 
       this.chats = [
         chat,
@@ -296,7 +298,7 @@ if(msg.type==="typing"){
 
 // message
 if(msg.type==="message"){
-
+  const messageText = msg.text || "📎 File"
   let friend = msg.sender === this.user.email
     ? msg.room.split("_").find(x=>x!==this.user.email)
     : msg.sender
@@ -304,7 +306,13 @@ if(msg.type==="message"){
   const chat = this.chats.find(x=>x.friend_email===friend)
 
   if(chat){
-    chat.last_message = msg.text || "📎 File"
+    if(
+      chat.last_message === messageText &&
+      Math.abs(new Date(chat.updated_at) - new Date(msg.created_at)) < 1000
+    ){
+      return
+    }
+    chat.last_message = messageText
     chat.updated_at = msg.created_at
 
     if(msg.sender !== this.user.email){

@@ -154,7 +154,7 @@ body {background:#020617;color:white;}
 </div>
 
 <script>
-const API="https://worker-chat.jihadwajib68.workers.dev"
+const WS_URL = "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 
 Vue.createApp({
 
@@ -179,32 +179,44 @@ normalChats(){
 }
 },
 
-async mounted(){
+mounted(){
 
-// 🔥 LOAD AWAL
-await this.loadChats()
-
-// 🔥 GLOBAL WS
-this.wsGlobal = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
-)
+// 🔥 CONNECT WS
+this.wsGlobal = new WebSocket(WS_URL)
 
 this.wsGlobal.onopen = ()=>{
+
+  // ONLINE
   this.wsGlobal.send(JSON.stringify({
     type:"online",
     user:this.user.email
   }))
+
+  // 🔥 INIT CHATS (WAJIB)
+  this.wsGlobal.send(JSON.stringify({
+    type:"init_chats",
+    user:this.user.email
+  }))
 }
 
-// 🔥 LISTENER GLOBAL
+// 🔥 LISTENER
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
+  // INIT CHATS
+  if(msg.type === "init_chats"){
+    this.chats = msg.chats || []
+    this.initRoomSockets()
+    return
+  }
+
+  // ONLINE
   if(msg.type==="online_list"){
     this.onlineUsers = msg.users || []
     return
   }
 
+  // MESSAGE REALTIME
   if(msg.type==="message"){
 
     let friend
@@ -232,34 +244,26 @@ this.wsGlobal.onmessage = (e)=>{
       ]
 
     }else{
-      this.loadChats()
+      // 🔥 fallback reload via WS
+      this.wsGlobal.send(JSON.stringify({
+        type:"init_chats",
+        user:this.user.email
+      }))
     }
 
     return
   }
 
+  // READ
   if(msg.type==="read"){
     const chat = this.chats.find(x=>x.friend_email===msg.user)
     if(chat) chat.unread=0
   }
 }
 
-// 🔥 fallback (biar ga pernah kosong)
-setInterval(()=>{
-  this.loadChats()
-},5000)
-
 },
 
 methods:{
-
-async loadChats(){
-const res = await fetch(API+"/chats?email="+this.user.email)
-this.chats = await res.json()
-
-// 🔥 init room WS
-this.initRoomSockets()
-},
 
 initRoomSockets(){
 
@@ -308,8 +312,6 @@ if(msg.type==="message"){
       chat,
       ...this.chats.filter(x=>x.friend_email!==friend)
     ]
-  }else{
-    this.loadChats()
   }
 }
 
@@ -336,20 +338,6 @@ isPinned(email){
 },
 
 openChat(c){
-
-const room = [this.user.email,c.friend_email].sort().join("_")
-
-fetch(API+"/mark-read",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-room:room,
-user:this.user.email
-})
-})
-
-c.unread=0
-
 localStorage.setItem("activeChat", JSON.stringify({
   email:c.friend_email,
   name:c.friend_name,
@@ -357,7 +345,6 @@ localStorage.setItem("activeChat", JSON.stringify({
   bio:c.friend_bio,
   last_seen:c.friend_last_seen
 }))
-
 location.href="chat.html"
 },
 

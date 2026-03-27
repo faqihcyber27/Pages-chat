@@ -8,30 +8,82 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-body {background:#020617;color:white;}
-
-.contact-card {
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(18px);
-  border: 1px solid rgba(255,255,255,0.08);
-  transition: 0.3s;
+body {
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  color: white;
 }
-.contact-card:hover {transform: scale(1.02);}
 
+/* SEARCH */
+.search-bar {
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+/* CARD */
+.contact-card {
+  background: rgba(255,255,255,0.04);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.08);
+
+  box-shadow:
+    0 8px 25px rgba(0,0,0,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+
+  transition: 0.25s;
+}
+
+.contact-card:hover {
+  transform: translateY(-3px) scale(1.02);
+}
+
+/* ACTION BUTTON */
 .action-btn {
-  background: rgba(255,255,255,0.08);
-  padding: 6px 8px;
-  border-radius: 10px;
+  background: rgba(255,255,255,0.06);
+  padding: 8px;
+  border-radius: 12px;
   transition: 0.2s;
 }
 .action-btn:hover {
+  transform: scale(1.15);
   background: rgba(255,255,255,0.15);
-  transform: scale(1.1);
 }
 
-@keyframes scaleIn{
-  from{transform:scale(0.8);opacity:0}
-  to{transform:scale(1);opacity:1}
+/* DELETE */
+.delete-btn:hover {
+  background: rgba(255,0,0,0.2);
+}
+
+/* ONLINE DOT */
+.online-dot {
+  width:8px;
+  height:8px;
+  background:#22c55e;
+  border-radius:999px;
+  box-shadow:0 0 8px #22c55e;
+}
+
+/* ADD BUTTON */
+.add-btn {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(20,20,30,0.9);
+  backdrop-filter: blur(20px);
+  padding: 12px 20px;
+  border-radius: 14px;
+  opacity: 0;
+  transition: 0.3s;
+}
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 </style>
 
@@ -41,46 +93,46 @@ body {background:#020617;color:white;}
 
 <div id="app" class="p-4">
 
-<h1 class="text-xl mb-3">Contacts</h1>
+<!-- HEADER -->
+<div class="mb-4">
+  <h1 class="text-2xl font-semibold mb-3">Contacts</h1>
 
-<button @click="showModal=true"
-class="mb-3 bg-purple-600 px-3 py-2 rounded">
-+ Add Friend
-</button>
+  <button @click="showModal=true"
+    class="add-btn px-4 py-2 rounded-xl text-sm mb-4">
+    + Add Friend
+  </button>
 
-<input v-model="search" placeholder="Search..."
-class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
+  <div class="relative">
+    <span class="absolute left-4 top-1/2 -translate-y-1/2 opacity-50">🔍</span>
+
+    <input v-model="search"
+      placeholder="Search contacts..."
+      class="search-bar w-full pl-10 pr-4 py-3 rounded-full outline-none">
+  </div>
+</div>
 
 <!-- CONTACT LIST -->
 <div v-for="c in filteredContacts"
      :key="c.email"
      @click="startChat(c)"
-     class="contact-card p-3 mb-3 rounded-2xl flex items-center justify-between cursor-pointer">
+     class="contact-card p-4 mb-3 rounded-2xl flex items-center justify-between cursor-pointer">
 
+  <!-- LEFT -->
   <div class="flex items-center gap-3">
 
     <img :src="c.avatar || 'https://i.pravatar.cc/40'"
-      class="w-10 h-10 rounded-full object-cover">
+      class="w-11 h-11 rounded-full object-cover">
 
     <div>
-      <p class="font-medium flex items-center gap-2">
+      <p class="font-semibold flex items-center gap-2">
         {{c.name}}
-
-        <span v-if="isOnline(c.email)"
-          class="text-[10px] bg-green-500/20 text-green-400 px-2 py-[2px] rounded-full">
-          🟢 Online
-        </span>
-
-        <span v-else class="text-[10px] opacity-50">
-          Offline
-        </span>
+        <span v-if="isOnline(c.email)" class="online-dot"></span>
       </p>
 
-      <p class="text-xs opacity-50 truncate max-w-[150px]">
+      <p class="text-xs opacity-50 truncate max-w-[180px]">
         {{ c.bio || 'Available' }}
       </p>
     </div>
-
   </div>
 
   <!-- ACTION -->
@@ -90,7 +142,7 @@ class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
 
     <button @click.stop="viewProfile(c)" class="action-btn">👁</button>
     
-    <button @click.stop="openDelete(c)" class="action-btn">🗑</button>
+    <button @click.stop="openDelete(c)" class="action-btn delete-btn">🗑</button>
 
   </div>
 
@@ -104,7 +156,7 @@ class="fixed inset-0 bg-black/70 flex items-center justify-center">
 
     <h2 class="mb-3">Add Friend</h2>
 
-    <input v-model="friendEmail" placeholder="Email"
+    <input v-model="friendEmail"
     class="p-3 w-full mb-3 bg-white/10 rounded">
 
     <div class="flex gap-2">
@@ -127,11 +179,10 @@ class="fixed inset-0 bg-black/70 flex items-center justify-center">
 <div v-if="selectedProfile"
 class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
-  <div class="bg-white/10 backdrop-blur-xl border border-white/10
-              p-6 rounded-2xl w-80 text-center animate-[scaleIn_.2s]">
+  <div class="bg-white/10 p-6 rounded-2xl w-80 text-center">
 
     <img :src="selectedProfile.avatar || 'https://i.pravatar.cc/150'"
-      class="w-24 h-24 rounded-full mx-auto mb-3 object-cover border border-white/20">
+      class="w-24 h-24 rounded-full mx-auto mb-3">
 
     <h2 class="text-lg font-semibold">
       {{selectedProfile.name}}
@@ -139,7 +190,7 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
     <p class="text-sm mt-1"
        :class="isOnline(selectedProfile.email) ? 'text-green-400' : 'opacity-50'">
-      {{ isOnline(selectedProfile.email) ? '🟢 Online' : 'Offline' }}
+      {{ isOnline(selectedProfile.email) ? 'Online' : 'Offline' }}
     </p>
 
     <p class="text-sm opacity-60 mt-2">
@@ -147,7 +198,6 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
     </p>
 
     <div class="flex gap-2 mt-4">
-
       <button @click="startChat(selectedProfile)"
         class="bg-purple-600 flex-1 p-2 rounded-lg">
         Chat
@@ -157,28 +207,39 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
         class="bg-gray-600 flex-1 p-2 rounded-lg">
         Close
       </button>
-
     </div>
 
   </div>
 
 </div>
+
+<!-- DELETE -->
 <div v-if="selectedContact"
-    class="fixed inset-0 bg-black/60 flex items-center justify-center">
+class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
-    <div class="glass p-5 rounded-xl w-72 text-center">
+  <div class="bg-white/10 p-5 rounded-xl w-72 text-center">
 
-      <p class="mb-4">Delete {{selectedContact.name}}?</p>
+    <p class="mb-4">Delete {{selectedContact.name}}?</p>
 
     <div class="flex gap-2">
       <button @click="deleteContact"
-        class="bg-red-500 flex-1 p-2 rounded">Delete</button>
+        class="bg-red-500 flex-1 p-2 rounded">
+        Delete
+      </button>
 
       <button @click="selectedContact=null"
-        class="bg-gray-600 flex-1 p-2 rounded">Cancel</button>
+        class="bg-gray-600 flex-1 p-2 rounded">
+        Cancel
+      </button>
     </div>
 
   </div>
+
+</div>
+
+<!-- TOAST -->
+<div :class="['toast', showToast ? 'show' : '']">
+  {{toastMessage}}
 </div>
 
 </div>
@@ -201,7 +262,9 @@ friendEmail:'',
 showModal:false,
 onlineUsers:[],
 ws:null,
-selectedProfile:null
+selectedProfile:null,
+showToast:false,
+toastMessage:""
 }
 },
 
@@ -221,7 +284,6 @@ setInterval(()=>{
   this.loadContacts()
 },2000)
 
-// 🔥 GLOBAL ONLINE (SAMA DENGAN CHAT)
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -244,7 +306,6 @@ this.ws.onopen = ()=>{
 
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
-
   if(msg.type==="online_list"){
     this.onlineUsers = msg.users || []
   }
@@ -254,14 +315,17 @@ this.ws.onmessage = (e)=>{
 
 methods:{
 
+showToastMsg(msg){
+  this.toastMessage = msg
+  this.showToast = true
+  setTimeout(()=> this.showToast=false,2000)
+},
+
 async loadContacts(){
   const res = await fetch(API+"/contacts?email="+this.user.email)
   const newContacts = await res.json()
-  // 🔥 langsung replace (biar delete ke-detect)
   this.contacts = []
-  setTimeout(()=>{
-    this.contacts = newContacts
-  },0)
+  setTimeout(()=>{ this.contacts = newContacts },0)
 },
 
 async sendRequest(){
@@ -273,14 +337,11 @@ async sendRequest(){
       to_email:this.friendEmail
     })
   })
-
   this.showModal=false
-  alert("Request sent")
+  this.showToastMsg("Request sent ✅")
 },
 
-// 🔥 FIX UTAMA (SINKRON CHAT.HTML)
 startChat(c){
-
   localStorage.setItem("activeChat", JSON.stringify({
     email: c.email,
     name: c.name,
@@ -288,10 +349,7 @@ startChat(c){
     bio: c.bio || "",
     last_seen: c.last_seen || null
   }))
-
-  setTimeout(()=>{
-    window.top.location.href = "chat.html"
-  },100)
+  setTimeout(()=>{ window.top.location.href = "chat.html" },100)
 },
 
 async deleteContact(){
@@ -299,15 +357,15 @@ async deleteContact(){
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
-    user_email:this.user.email,
-    friend_email:this.selectedContact.email
+      user_email:this.user.email,
+      friend_email:this.selectedContact.email
     })
   })
   this.contacts = this.contacts.filter(c =>
-  c.email !== this.selectedContact.email
-)
-
-this.selectedContact = null
+    c.email !== this.selectedContact.email
+  )
+  this.selectedContact = null
+  this.showToastMsg("Contact deleted 🗑")
 },
 
 viewProfile(c){

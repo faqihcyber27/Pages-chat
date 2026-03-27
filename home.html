@@ -193,35 +193,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig)
 
 const messaging = firebase.messaging()
+messaging.onMessage((payload)=>{
+  console.log("NOTIF MASUK:", payload)
 
-// 🔥 NOTIFICATION SETUP
-async function initNotification(){
-  const permission = await Notification.requestPermission()
-
-  if(permission === "granted"){
-    subscribeUser()
+  if(Notification.permission === "granted"){
+    new Notification(payload.notification.title, {
+      body: payload.notification.body
+    })
   }
-}
-
-async function subscribeUser(){
-
-  if(localStorage.getItem("subscribed")) return
-
-  const reg = await navigator.serviceWorker.ready
-
-  const sub = await reg.pushManager.subscribe({
-    userVisibleOnly: true,
-    applicationServerKey: "PUBLIC_VAPID_KEY"
-  })
-
-  await fetch(API + "/subscribe", {
-    method: "POST",
-    headers: {"Content-Type":"application/json"},
-    body: JSON.stringify(sub)
-  })
-
-  localStorage.setItem("subscribed","1")
-}
+})
 
 document.getElementById("username").innerText =
   "Hi, " + user.name
@@ -313,9 +293,12 @@ async function initFCM(){
     return
   }
 
-  const token = await messaging.getToken({
-    vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0 "
-  })
+  const reg = await navigator.serviceWorker.ready
+
+const token = await messaging.getToken({
+  vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0",
+  serviceWorkerRegistration: reg
+})
 
   console.log("TOKEN:", token)
 
@@ -336,17 +319,9 @@ const ws = new WebSocket(
 
 // 🔥 REGISTER SW
 navigator.serviceWorker.register("/firebase-messaging-sw.js")
-
-alert("init jalan")
-// 🔥 START FCM
-initFCM()
-
-// REGISTER SERVICE WORKER
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/sw.js").then(()=>{
-    initNotification()
-  })
-}
+.then(()=>{
+  initFCM()
+})
 
 ws.onopen = ()=>{
   ws.send(JSON.stringify({

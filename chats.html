@@ -53,10 +53,12 @@ body {background:#020617;color:white;}
       <p class="font-semibold flex items-center gap-2">
         {{c.friend_name}}
 
+        <!-- ONLINE -->
         <span v-if="isOnline(getFriendEmail(c))"
           class="w-2 h-2 bg-green-400 rounded-full"></span>
       </p>
 
+      <!-- MESSAGE / TYPING -->
       <p class="text-sm mt-1"
          :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-60'">
 
@@ -73,14 +75,24 @@ body {background:#020617;color:white;}
     </div>
 
     <!-- RIGHT -->
-    <div class="text-right">
+    <div class="text-right flex flex-col items-end gap-1">
 
+      <!-- TIME -->
       <p class="text-xs opacity-50">
         {{formatTime(c.updated_at)}}
       </p>
 
+      <!-- ⭐ FAVORITE -->
+      <button 
+        @click.stop="toggleFav(c)"
+        :class="isFav(c.friend_email) ? 'text-yellow-400' : 'opacity-40'"
+        class="text-lg transition hover:scale-110">
+        ⭐
+      </button>
+
+      <!-- UNREAD -->
       <div v-if="c.unread > 0"
-        class="bg-red-500 text-xs px-2 py-1 rounded-full mt-1">
+        class="bg-red-500 text-xs px-2 py-1 rounded-full">
         {{c.unread}}
       </div>
 
@@ -111,16 +123,27 @@ onlineUsers:[],
 typingUsers:{},
 
 wsGlobal:null,
-wsRooms:{}
+wsRooms:{},
+
+// ⭐ FAVORITE
+favorites: JSON.parse(localStorage.getItem("favorites") || "[]")
 }
 },
 
 computed:{
 filteredChats(){
-return this.chats.filter(c=>{
-const name = (c.friend_name || '').toLowerCase()
-return name.includes(this.search.toLowerCase())
-})
+
+  const filtered = this.chats.filter(c=>{
+    const name = (c.friend_name || '').toLowerCase()
+    return name.includes(this.search.toLowerCase())
+  })
+
+  // ⭐ PINNED KE ATAS
+  return filtered.sort((a,b)=>{
+    const aFav = this.isFav(a.friend_email) ? 1 : 0
+    const bFav = this.isFav(b.friend_email) ? 1 : 0
+    return bFav - aFav
+  })
 }
 },
 
@@ -165,6 +188,26 @@ this.initRoomSockets()
 
 methods:{
 
+// ⭐ TOGGLE FAVORITE
+toggleFav(c){
+  const i = this.favorites.findIndex(f => f.email === c.friend_email)
+
+  if(i > -1){
+    this.favorites.splice(i,1)
+  }else{
+    this.favorites.unshift({
+      email: c.friend_email,
+      name: c.friend_name
+    })
+  }
+
+  localStorage.setItem("favorites", JSON.stringify(this.favorites))
+},
+
+isFav(email){
+  return this.favorites.find(f => f.email === email)
+},
+
 initRoomSockets(){
   this.chats.forEach(c=>{
     const room = [this.user.email, c.friend_email].sort().join("_")
@@ -178,6 +221,7 @@ initRoomSockets(){
     ws.onmessage = (e)=>{
       const msg = JSON.parse(e.data)
 
+      // typing
       if(msg.type==="typing"){
         if(msg.sender === this.user.email) return
 
@@ -188,6 +232,7 @@ initRoomSockets(){
         },1500)
       }
 
+      // new message
       if(msg.type==="message"){
         this.loadChats()
       }
@@ -206,6 +251,7 @@ async loadChats(){
 },
 
 openChat(c){
+
   const room = [this.user.email, c.friend_email].sort().join("_")
 
   fetch(API+"/mark-read",{

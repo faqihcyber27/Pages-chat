@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://unpkg.com/vue@3"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-[#020617] text-white">
+
+<div id="app" class="p-4">
+
+<h1 class="text-xl mb-3">Contacts</h1>
+
+<button @click="showModal=true"
+class="mb-3 bg-purple-600 px-3 py-2 rounded">
++ Add Friend
+</button>
+
+<input v-model="search" placeholder="Search..."
+class="w-full mb-4 p-2 rounded bg-white/10">
+
+<div v-for="c in filteredContacts"
+@click="startChat(c)"
+class="p-3 mb-2 bg-white/10 rounded">
+
+<p>{{c.name}}</p>
+
+<p class="text-xs">
+<span v-if="isOnline(c.email)" class="text-green-400">Online</span>
+<span v-else>Offline</span>
+</p>
+
+</div>
+
+<!-- ADD FRIEND -->
+<div v-if="showModal"
+class="fixed inset-0 bg-black/70 flex items-center justify-center">
+
+<div class="bg-white/10 p-4 rounded">
+
+<input v-model="friendEmail" placeholder="Email"
+class="p-2 w-full mb-2 bg-white/10 rounded">
+
+<button @click="sendRequest"
+class="bg-purple-600 px-3 py-2 rounded w-full">
+Send
+</button>
+
+</div>
+
+</div>
+
+</div>
+
+<script>
+const API="https://worker-chat.jihadwajib68.workers.dev"
+
+if(!localStorage.getItem("user")){
+parent.location.href="index.html"
+}
+
+Vue.createApp({
+data(){
+return{
+user: JSON.parse(localStorage.getItem("user")),
+contacts:[],
+search:'',
+friendEmail:'',
+showModal:false,
+onlineUsers:[]
+}
+},
+
+computed:{
+filteredContacts(){
+return this.contacts.filter(c=>
+c.name.toLowerCase().includes(this.search.toLowerCase())
+)
+}
+},
+
+async mounted(){
+this.loadContacts()
+
+this.ws=new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
+
+this.ws.onmessage=(e)=>{
+const msg=JSON.parse(e.data)
+if(msg.type==="online_list"){
+this.onlineUsers=msg.users||[]
+}
+}
+},
+
+methods:{
+async loadContacts(){
+this.contacts = await (await fetch(API+"/contacts?email="+this.user.email)).json()
+},
+
+async sendRequest(){
+await fetch(API+"/send-request",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+from_email:this.user.email,
+to_email:this.friendEmail
+})
+})
+
+this.showModal=false
+alert("Request sent")
+},
+
+startChat(c){
+localStorage.setItem("activeChat", JSON.stringify(c))
+location.href="chat.html"
+},
+
+isOnline(email){
+return this.onlineUsers.includes(email)
+}
+}
+
+}).mount("#app")
+</script>
+
+</body>
+</html>

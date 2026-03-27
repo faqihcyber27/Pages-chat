@@ -3,11 +3,40 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body {background:#020617;color:white;}
+
+.contact-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: 0.3s;
+}
+
+.contact-card:hover {
+  transform: scale(1.02);
+}
+
+.action-btn {
+  background: rgba(255,255,255,0.08);
+  padding: 6px 8px;
+  border-radius: 10px;
+  transition: 0.2s;
+}
+
+.action-btn:hover {
+  background: rgba(255,255,255,0.15);
+  transform: scale(1.1);
+}
+</style>
+
 </head>
 
-<body class="bg-[#020617] text-white">
+<body>
 
 <div id="app" class="p-4">
 
@@ -19,36 +48,75 @@ class="mb-3 bg-purple-600 px-3 py-2 rounded">
 </button>
 
 <input v-model="search" placeholder="Search..."
-class="w-full mb-4 p-2 rounded bg-white/10">
+class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
 
+<!-- CONTACT LIST -->
 <div v-for="c in filteredContacts"
-@click="startChat(c)"
-class="p-3 mb-2 bg-white/10 rounded">
+     @click="startChat(c)"
+     class="contact-card p-3 mb-3 rounded-2xl flex items-center justify-between cursor-pointer">
 
-<p>{{c.name}}</p>
+  <!-- LEFT -->
+  <div class="flex items-center gap-3">
 
-<p class="text-xs">
-<span v-if="isOnline(c.email)" class="text-green-400">Online</span>
-<span v-else>Offline</span>
-</p>
+    <img :src="c.avatar || 'https://i.pravatar.cc/40'"
+      class="w-10 h-10 rounded-full object-cover">
+
+    <div>
+      <p class="font-medium flex items-center gap-2">
+        {{c.name}}
+
+        <span v-if="isOnline(c.email)"
+          class="text-[10px] bg-green-500/20 text-green-400 px-2 py-[2px] rounded-full">
+          🟢 Online
+        </span>
+
+        <span v-else class="text-[10px] opacity-50">
+          Offline
+        </span>
+      </p>
+
+      <p class="text-xs opacity-50 truncate max-w-[150px]">
+        {{ c.bio || 'Available' }}
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ACTION -->
+  <div class="flex gap-2">
+
+    <button @click.stop="startChat(c)" class="action-btn">💬</button>
+
+    <button @click.stop="viewProfile(c)" class="action-btn">👁</button>
+
+  </div>
 
 </div>
 
-<!-- ADD FRIEND -->
+<!-- ADD FRIEND MODAL -->
 <div v-if="showModal"
 class="fixed inset-0 bg-black/70 flex items-center justify-center">
 
-<div class="bg-white/10 p-4 rounded">
+  <div class="bg-white/10 p-5 rounded-xl w-80">
 
-<input v-model="friendEmail" placeholder="Email"
-class="p-2 w-full mb-2 bg-white/10 rounded">
+    <h2 class="mb-3">Add Friend</h2>
 
-<button @click="sendRequest"
-class="bg-purple-600 px-3 py-2 rounded w-full">
-Send
-</button>
+    <input v-model="friendEmail" placeholder="Email"
+    class="p-3 w-full mb-3 bg-white/10 rounded">
 
-</div>
+    <div class="flex gap-2">
+      <button @click="sendRequest"
+      class="bg-purple-600 flex-1 p-2 rounded">
+      Send
+      </button>
+
+      <button @click="showModal=false"
+      class="bg-gray-600 flex-1 p-2 rounded">
+      Close
+      </button>
+    </div>
+
+  </div>
 
 </div>
 
@@ -58,10 +126,11 @@ Send
 const API="https://worker-chat.jihadwajib68.workers.dev"
 
 if(!localStorage.getItem("user")){
-parent.location.href="index.html"
+  location.href="index.html"
 }
 
 Vue.createApp({
+
 data(){
 return{
 user: JSON.parse(localStorage.getItem("user")),
@@ -69,58 +138,92 @@ contacts:[],
 search:'',
 friendEmail:'',
 showModal:false,
-onlineUsers:[]
+onlineUsers:[],
+ws:null
 }
 },
 
 computed:{
 filteredContacts(){
-return this.contacts.filter(c=>
-c.name.toLowerCase().includes(this.search.toLowerCase())
+return this.contacts.filter(c =>
+  c.name?.toLowerCase().includes(this.search.toLowerCase())
 )
 }
 },
 
 async mounted(){
+
 this.loadContacts()
 
-this.ws=new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
+// 🔥 GLOBAL ONLINE (SAMA KAYAK HOME)
+this.ws = new WebSocket(
+  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
+)
 
-this.ws.onmessage=(e)=>{
-const msg=JSON.parse(e.data)
-if(msg.type==="online_list"){
-this.onlineUsers=msg.users||[]
+this.ws.onopen = ()=>{
+  this.ws.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
+
+  setInterval(()=>{
+    if(this.ws.readyState===1){
+      this.ws.send(JSON.stringify({
+        type:"online",
+        user:this.user.email
+      }))
+    }
+  },5000)
 }
+
+this.ws.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  if(msg.type==="online_list"){
+    this.onlineUsers = msg.users || []
+  }
 }
+
 },
 
 methods:{
+
 async loadContacts(){
-this.contacts = await (await fetch(API+"/contacts?email="+this.user.email)).json()
+  this.contacts = await (await fetch(API+"/contacts?email="+this.user.email)).json()
 },
 
 async sendRequest(){
-await fetch(API+"/send-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-from_email:this.user.email,
-to_email:this.friendEmail
-})
-})
+  await fetch(API+"/send-request",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      from_email:this.user.email,
+      to_email:this.friendEmail
+    })
+  })
 
-this.showModal=false
-alert("Request sent")
+  this.showModal=false
+  alert("Request sent")
 },
 
 startChat(c){
-localStorage.setItem("activeChat", JSON.stringify(c))
-location.href="chat.html"
+  localStorage.setItem("activeChat", JSON.stringify({
+    email:c.email,
+    name:c.name,
+    avatar:c.avatar,
+    bio:c.bio
+  }))
+  location.href="chat.html"
+},
+
+viewProfile(c){
+  alert("Profile: " + c.name)
 },
 
 isOnline(email){
-return this.onlineUsers.includes(email)
+  return this.onlineUsers.includes(email)
 }
+
 }
 
 }).mount("#app")

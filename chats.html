@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://unpkg.com/vue@3"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-[#020617] text-white">
+
+<div id="app" class="p-4">
+
+<h1 class="text-xl mb-3">Chats</h1>
+
+<input v-model="search" placeholder="Search..."
+class="w-full mb-4 p-2 rounded bg-white/10">
+
+<div v-for="c in filteredChats"
+@click="openChat(c)"
+class="p-3 mb-2 bg-white/10 rounded">
+
+<p class="font-semibold">
+  {{c.friend_name}}
+  <span v-if="isOnline(getFriendEmail(c))" class="text-green-400">●</span>
+</p>
+
+<p class="text-sm"
+:class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : ''">
+
+<span v-if="typingUsers[getFriendEmail(c)]">
+  typing...
+</span>
+<span v-else>
+  {{c.last_message}}
+</span>
+
+</p>
+
+</div>
+
+</div>
+
+<script>
+const API="https://worker-chat.jihadwajib68.workers.dev"
+
+if(!localStorage.getItem("user")){
+  parent.location.href="index.html"
+}
+
+Vue.createApp({
+data(){
+return{
+user: JSON.parse(localStorage.getItem("user")),
+chats:[],
+search:'',
+onlineUsers:[],
+typingUsers:{}
+}
+},
+
+computed:{
+filteredChats(){
+return this.chats.filter(c=>{
+const name = c.friend_name.toLowerCase()
+return name.includes(this.search.toLowerCase())
+})
+}
+},
+
+async mounted(){
+this.loadChats()
+setInterval(()=>this.loadChats(),2000)
+
+// WS GLOBAL
+this.ws = new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
+
+this.ws.onopen=()=>{
+this.ws.send(JSON.stringify({type:"online",user:this.user.email}))
+}
+
+this.ws.onmessage=(e)=>{
+const msg=JSON.parse(e.data)
+
+if(msg.type==="online_list"){
+this.onlineUsers=msg.users||[]
+}
+
+if(msg.type==="typing"){
+this.typingUsers[msg.sender]=true
+setTimeout(()=>delete this.typingUsers[msg.sender],2000)
+}
+}
+},
+
+methods:{
+async loadChats(){
+this.chats = await (await fetch(API+"/chats?email="+this.user.email)).json()
+},
+
+openChat(c){
+localStorage.setItem("activeChat", JSON.stringify(c))
+location.href="chat.html"
+},
+
+getFriendEmail(c){
+return c.friend_email
+},
+
+isOnline(email){
+return this.onlineUsers.includes(email)
+}
+}
+
+}).mount("#app")
+</script>
+
+</body>
+</html>

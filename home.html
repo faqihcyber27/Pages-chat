@@ -31,7 +31,7 @@ body {
   position:absolute;
   inset:0;
   background: radial-gradient(circle at right top, rgba(255,255,255,0.2), transparent 60%);
-  pointer-events: none; /* 🔥 FIX UTAMA */
+  pointer-events: none; /* 🔥 FIX CLICK */
 }
 
 /* ===== NAVBAR ===== */
@@ -40,6 +40,7 @@ body {
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
+
   width: 92%;
   border-radius: 20px;
 
@@ -83,14 +84,14 @@ body {
   transform: scale(0.85);
 }
 
-/* FRAME FIX */
+/* FRAME */
 #frame {
   transition: opacity 0.25s ease;
   position: relative;
   z-index: 1;
 }
 
-/* MODAL */
+/* ===== MODAL ===== */
 #requestPopup {
   z-index: 999;
 }
@@ -155,7 +156,7 @@ if(!localStorage.getItem("user")){
 
 <div class="h-screen flex flex-col">
 
-  <!-- HEADER -->
+  <!-- HEADER ONLY -->
   <div class="header p-4 flex justify-between items-center mx-2 mt-2">
 
     <div class="flex items-center gap-3">
@@ -170,7 +171,7 @@ if(!localStorage.getItem("user")){
 
     </div>
 
-    <!-- 🔔 FIXED -->
+    <!-- 🔔 FIX -->
     <div class="relative z-30">
       <button onclick="toggleRequests()"
         class="text-xl hover:scale-110 transition relative z-30">
@@ -185,10 +186,10 @@ if(!localStorage.getItem("user")){
 
   </div>
 
-  <!-- CONTENT -->
+  <!-- ONLY FRAME (CONTENT TIDAK DIUBAH) -->
   <iframe id="frame" src="chats.html" class="flex-1 w-full border-0"></iframe>
 
-  <!-- NAVBAR -->
+  <!-- NAVBAR ONLY -->
   <div class="navbar flex justify-around text-xl">
 
     <button onclick="navigate('chats.html', this)"
@@ -210,7 +211,7 @@ if(!localStorage.getItem("user")){
 
 </div>
 
-<!-- MODAL -->
+<!-- REQUEST MODAL -->
 <div id="requestPopup"
 class="hidden fixed inset-0 flex items-center justify-center
 bg-black/70 backdrop-blur-sm">

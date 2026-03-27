@@ -37,10 +37,7 @@ body {background:#020617;color:white;}
   <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
 
   <div v-for="c in pinnedChats"
-     @click="handleClick(c)"
-     @touchstart="startPress(c, $event)"
-     @touchend="endPress"
-     @touchmove="cancelPress"
+     @click="openChat(c)"
      class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer border border-yellow-400/20">
 
     <div class="flex items-center gap-3">
@@ -96,8 +93,6 @@ body {background:#020617;color:white;}
 
   <div v-for="c in normalChats"
        @click="openChat(c)"
-       @touchstart="startChatPress(c)"
-       @touchend="cancelPress"
        class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
 
     <div class="flex items-center gap-3">
@@ -154,28 +149,6 @@ body {background:#020617;color:white;}
 
   </div>
 
-  <!-- DELETE -->
-  <div v-if="selectedChat"
-    class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-    <div class="p-5 bg-gray-900 rounded-xl w-72 text-center">
-
-      <p class="mb-4">
-        Delete chat with {{selectedChat.friend_name}}?
-      </p>
-
-      <div class="flex gap-2">
-        <button @click="deleteChat"
-          class="bg-red-500 flex-1 p-2 rounded">Delete</button>
-
-        <button @click="selectedChat=null"
-          class="bg-gray-600 flex-1 p-2 rounded">Cancel</button>
-      </div>
-
-    </div>
-
-  </div>
-
 </div>
 
 </div>
@@ -189,12 +162,10 @@ data(){
 return{
 user: JSON.parse(localStorage.getItem("user")),
 chats:[],
-search:'',
 onlineUsers:[],
 typingUsers:{},
-selectedChat:null,
-wsRooms:{},
 wsGlobal:null,
+wsRooms:{},
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
 }
 },
@@ -208,19 +179,10 @@ normalChats(){
 }
 },
 
-// ✅ FIX PENTING (INI PENYEBAB KOSONG)
-watch:{
-  chats(){
-    this.$nextTick(()=>{
-      this.initRoomSockets()
-    })
-  }
-},
+async mounted(){
 
-mounted(){
-
-// ✅ LOAD SEKALI
-this.loadChats()
+// 🔥 LOAD AWAL
+await this.loadChats()
 
 // 🔥 GLOBAL WS
 this.wsGlobal = new WebSocket(
@@ -234,16 +196,16 @@ this.wsGlobal.onopen = ()=>{
   }))
 }
 
+// 🔥 LISTENER GLOBAL
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // 🔥 ONLINE USER (TETAP)
   if(msg.type==="online_list"){
     this.onlineUsers = msg.users || []
+    return
   }
 
-  // 🔥 REALTIME CHAT LIST (INI YANG HILANG)
-  if(msg.type === "message" || !msg.type){
+  if(msg.type==="message"){
 
     let friend
 
@@ -257,7 +219,6 @@ this.wsGlobal.onmessage = (e)=>{
     const chat = this.chats.find(c=>c.friend_email===friend)
 
     if(chat){
-
       chat.last_message = msg.text || "📎 File"
       chat.updated_at = msg.created_at
 
@@ -265,75 +226,39 @@ this.wsGlobal.onmessage = (e)=>{
         chat.unread = (chat.unread||0)+1
       }
 
-      // 🔥 REORDER BIAR KE ATAS
       this.chats = [
         chat,
         ...this.chats.filter(x=>x.friend_email!==friend)
       ]
 
     }else{
-      // 🔥 CHAT BARU (WAJIB)
       this.loadChats()
     }
+
+    return
   }
 
-  // 🔥 READ STATUS
   if(msg.type==="read"){
     const chat = this.chats.find(x=>x.friend_email===msg.user)
     if(chat) chat.unread=0
   }
-
-  // 🔥 DELETE SYNC (OPTIONAL)
-  if(msg.type==="chat_deleted"){
-    this.chats = this.chats.filter(c =>
-      c.friend_email !== msg.friend
-    )
-  }
 }
+
+// 🔥 fallback (biar ga pernah kosong)
+setInterval(()=>{
+  this.loadChats()
+},5000)
 
 },
 
 methods:{
 
-togglePin(c){
-  const i = this.pinned.indexOf(c.friend_email)
-  if(i>-1){
-    this.pinned.splice(i,1)
-  }else{
-    this.pinned.push(c.friend_email)
-  }
-  localStorage.setItem("pinned", JSON.stringify(this.pinned))
-},
+async loadChats(){
+const res = await fetch(API+"/chats?email="+this.user.email)
+this.chats = await res.json()
 
-isPinned(email){
-  return this.pinned.includes(email)
-},
-
-startChatPress(c){
-  this.pressTimer=setTimeout(()=>{
-    this.selectedChat=c
-  },600)
-},
-
-cancelPress(){
-  clearTimeout(this.pressTimer)
-},
-
-async deleteChat(){
-  await fetch(API+"/delete-chat",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      user1:this.user.email,
-      user2:this.selectedChat.friend_email
-    })
-  })
-
-  this.chats = this.chats.filter(c =>
-    c.friend_email !== this.selectedChat.friend_email
-  )
-
-  this.selectedChat=null
+// 🔥 init room WS
+this.initRoomSockets()
 },
 
 initRoomSockets(){
@@ -363,7 +288,7 @@ if(msg.type==="typing"){
 }
 
 // message
-if(!msg.type || msg.type==="message"){
+if(msg.type==="message"){
 
   let friend = msg.sender === this.user.email
     ? msg.room.split("_").find(x=>x!==this.user.email)
@@ -383,12 +308,9 @@ if(!msg.type || msg.type==="message"){
       chat,
       ...this.chats.filter(x=>x.friend_email!==friend)
     ]
+  }else{
+    this.loadChats()
   }
-}
-
-if(msg.type==="read"){
-  const chat = this.chats.find(x=>x.friend_email===msg.user)
-  if(chat) chat.unread=0
 }
 
 }
@@ -399,9 +321,18 @@ this.wsRooms[room]=ws
 
 },
 
-async loadChats(){
-const res = await fetch(API+"/chats?email="+this.user.email)
-this.chats = await res.json()
+togglePin(c){
+  const i = this.pinned.indexOf(c.friend_email)
+  if(i>-1){
+    this.pinned.splice(i,1)
+  }else{
+    this.pinned.push(c.friend_email)
+  }
+  localStorage.setItem("pinned", JSON.stringify(this.pinned))
+},
+
+isPinned(email){
+  return this.pinned.includes(email)
 },
 
 openChat(c){
@@ -427,7 +358,7 @@ localStorage.setItem("activeChat", JSON.stringify({
   last_seen:c.friend_last_seen
 }))
 
-parent.location.href="chat.html"
+location.href="chat.html"
 },
 
 getName(c){ return c.friend_name || c.friend_email },

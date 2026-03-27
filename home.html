@@ -8,42 +8,67 @@
 
 <style>
 body {
-  background: linear-gradient(180deg, #0f172a, #020617);
+  background: radial-gradient(circle at top, #0f172a, #020617);
   color: white;
 }
 
-/* HEADER */
+/* ===== HEADER PREMIUM ===== */
 .header {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
-  position: relative;
-  overflow: hidden;
-}
-.header::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at top left, rgba(255,255,255,0.2), transparent 60%);
-}
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-radius: 0 0 24px 24px;
 
-/* NAVBAR */
-.navbar {
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(25px);
-  border-top: 1px solid rgba(255,255,255,0.1);
   box-shadow:
-    0 -10px 30px rgba(0,0,0,0.5),
-    inset 0 1px 0 rgba(255,255,255,0.05);
+    0 10px 40px rgba(124,58,237,0.4),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+
+  backdrop-filter: blur(20px);
+  position: relative;
 }
 
+.header::after {
+  content:"";
+  position:absolute;
+  inset:0;
+  background: radial-gradient(circle at right top, rgba(255,255,255,0.2), transparent 60%);
+}
+
+/* ===== NAVBAR FLOATING ===== */
+.navbar {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  width: 92%;
+  border-radius: 20px;
+
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(25px);
+
+  border: 1px solid rgba(255,255,255,0.1);
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.05);
+
+  padding: 8px;
+}
+
+/* NAV BUTTON */
 .nav-btn {
-  position: relative;
-  padding: 10px 16px;
+  flex: 1;
+  padding: 10px 0;
   border-radius: 14px;
   transition: 0.25s;
+  position: relative;
 }
+
+/* ACTIVE */
 .active {
   color: #a78bfa;
 }
+
+/* GLOW */
 .active::before {
   content:"";
   position:absolute;
@@ -53,15 +78,17 @@ body {
   filter: blur(10px);
   z-index:-1;
 }
+
 .nav-btn:active {
-  transform: scale(0.9);
+  transform: scale(0.85);
 }
 
+/* FRAME */
 #frame {
   transition: opacity 0.25s ease;
 }
 
-/* 💎 GLASS MODAL */
+/* MODAL */
 .glass-card {
   background: rgba(255,255,255,0.06);
   backdrop-filter: blur(25px);
@@ -72,7 +99,7 @@ body {
   border-radius: 20px;
 }
 
-/* ✨ ANIMATION */
+/* ANIMATION */
 @keyframes modalIn {
   0% {transform: scale(0.8) translateY(30px); opacity: 0;}
   100% {transform: scale(1) translateY(0); opacity: 1;}
@@ -123,25 +150,29 @@ if(!localStorage.getItem("user")){
 <div class="h-screen flex flex-col">
 
   <!-- HEADER -->
-  <div class="header p-5 flex justify-between items-center shadow-xl">
+  <div class="header p-4 flex justify-between items-center mx-2 mt-2">
 
     <div class="flex items-center gap-3">
+
       <img id="avatar"
-        class="w-12 h-12 rounded-full object-cover border border-white/20 shadow-lg">
+        class="w-11 h-11 rounded-full object-cover border border-white/20 shadow-md">
 
       <div>
-        <h1 class="text-lg font-semibold drop-shadow" id="username">Loading...</h1>
-        <p class="text-xs opacity-80">Realtime Chat App</p>
+        <h1 class="text-base font-semibold" id="username">Loading...</h1>
+        <p class="text-xs opacity-70">Realtime Chat</p>
       </div>
+
     </div>
 
     <!-- 🔔 -->
     <div class="relative">
       <button onclick="toggleRequests()"
-        class="text-2xl hover:scale-110 transition">🔔</button>
+        class="text-xl hover:scale-110 transition">
+        🔔
+      </button>
 
       <span id="notifCount"
-        class="hidden absolute -top-2 -right-2 bg-red-500 text-xs px-1 rounded-full">
+        class="hidden absolute -top-2 -right-2 bg-red-500 text-[10px] px-1.5 rounded-full">
         0
       </span>
     </div>
@@ -152,15 +183,28 @@ if(!localStorage.getItem("user")){
   <iframe id="frame" src="chats.html" class="flex-1 w-full border-0"></iframe>
 
   <!-- NAVBAR -->
-  <div class="navbar flex justify-around py-3 text-xl rounded-t-2xl">
-    <button onclick="navigate('chats.html', this)" class="nav-btn active">💬</button>
-    <button onclick="navigate('contacts.html', this)" class="nav-btn">👤</button>
-    <button onclick="navigate('profile.html', this)" class="nav-btn">⚙️</button>
+  <div class="navbar flex justify-around text-xl">
+
+    <button onclick="navigate('chats.html', this)"
+      class="nav-btn active">
+      💬
+    </button>
+
+    <button onclick="navigate('contacts.html', this)"
+      class="nav-btn">
+      👤
+    </button>
+
+    <button onclick="navigate('profile.html', this)"
+      class="nav-btn">
+      ⚙️
+    </button>
+
   </div>
 
 </div>
 
-<!-- 💎 MODAL -->
+<!-- MODAL -->
 <div id="requestPopup"
 class="hidden fixed inset-0 z-50 flex items-center justify-center
 bg-black/70 backdrop-blur-sm">
@@ -189,7 +233,6 @@ document.getElementById("username").innerText =
 document.getElementById("avatar").src =
   user.avatar || "https://ui-avatars.com/api/?name=" + (user.name || "User")
 
-// NAVIGATION
 function navigate(page, el){
   const frame = document.getElementById("frame")
 
@@ -205,7 +248,6 @@ function navigate(page, el){
   el.classList.add("active")
 }
 
-// ===== REQUEST =====
 let requests = []
 
 async function loadRequests(){
@@ -272,7 +314,6 @@ function closeRequests(){
   document.getElementById("requestPopup").classList.add("hidden")
 }
 
-// AUTO LOAD
 loadRequests()
 setInterval(loadRequests, 5000)
 

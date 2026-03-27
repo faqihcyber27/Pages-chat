@@ -258,6 +258,28 @@ this.wsGlobal.onmessage = (e)=>{
 
     return
   }
+  
+  // PROFILE UPDATE
+if(msg.type === "profile_update"){
+  this.chats = this.chats.map(c => {
+    if(c.friend_email === msg.user.email){
+      return {
+        ...c,
+        friend_name: msg.user.name,
+        friend_avatar: msg.user.avatar
+      }
+    }
+    return c
+  })
+}
+
+// REFRESH CHAT LIST
+if(msg.type === "chat_update"){
+  this.ws.send(JSON.stringify({
+    type:"init_chats",
+    user:this.user.email
+  }))
+}
 
   // READ
   if(msg.type==="read"){

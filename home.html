@@ -294,6 +294,15 @@ ws.onmessage = (e)=>{
   renderRequests()
 }
 
+  if(msg.type === "contact_request"){
+  if(msg.to === user.email){
+    ws.send(JSON.stringify({
+      type:"init_requests",
+      user:user.email
+    }))
+  }
+}
+
   // ❌ REMOVE
   if(msg.type==="request_update"){
     requests = requests.filter(r=>r.id!==msg.id)

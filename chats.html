@@ -237,8 +237,57 @@ this.wsGlobal.onopen = ()=>{
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
+  // 🔥 ONLINE USER (TETAP)
   if(msg.type==="online_list"){
     this.onlineUsers = msg.users || []
+  }
+
+  // 🔥 REALTIME CHAT LIST (INI YANG HILANG)
+  if(msg.type === "message" || !msg.type){
+
+    let friend
+
+    if(msg.sender === this.user.email){
+      const parts = msg.room.split("_")
+      friend = parts.find(x=>x!==this.user.email)
+    }else{
+      friend = msg.sender
+    }
+
+    const chat = this.chats.find(c=>c.friend_email===friend)
+
+    if(chat){
+
+      chat.last_message = msg.text || "📎 File"
+      chat.updated_at = msg.created_at
+
+      if(msg.sender !== this.user.email){
+        chat.unread = (chat.unread||0)+1
+      }
+
+      // 🔥 REORDER BIAR KE ATAS
+      this.chats = [
+        chat,
+        ...this.chats.filter(x=>x.friend_email!==friend)
+      ]
+
+    }else{
+      // 🔥 CHAT BARU (WAJIB)
+      this.loadChats()
+    }
+  }
+
+  // 🔥 READ STATUS
+  if(msg.type==="read"){
+    const chat = this.chats.find(x=>x.friend_email===msg.user)
+    if(chat) chat.unread=0
+  }
+
+  // 🔥 DELETE SYNC (OPTIONAL)
+  if(msg.type==="chat_deleted"){
+    this.chats = this.chats.filter(c =>
+      c.friend_email !== msg.friend
+    )
   }
 }
 

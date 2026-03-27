@@ -12,7 +12,7 @@ body {
   color: white;
 }
 
-/* ===== HEADER PREMIUM ===== */
+/* ===== HEADER ===== */
 .header {
   background: linear-gradient(135deg, #7c3aed, #4f46e5);
   border-radius: 0 0 24px 24px;
@@ -23,6 +23,7 @@ body {
 
   backdrop-filter: blur(20px);
   position: relative;
+  z-index: 20;
 }
 
 .header::after {
@@ -30,15 +31,15 @@ body {
   position:absolute;
   inset:0;
   background: radial-gradient(circle at right top, rgba(255,255,255,0.2), transparent 60%);
+  pointer-events: none; /* 🔥 FIX UTAMA */
 }
 
-/* ===== NAVBAR FLOATING ===== */
+/* ===== NAVBAR ===== */
 .navbar {
   position: fixed;
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-
   width: 92%;
   border-radius: 20px;
 
@@ -52,6 +53,7 @@ body {
     inset 0 1px 0 rgba(255,255,255,0.05);
 
   padding: 8px;
+  z-index: 30;
 }
 
 /* NAV BUTTON */
@@ -63,12 +65,10 @@ body {
   position: relative;
 }
 
-/* ACTIVE */
 .active {
   color: #a78bfa;
 }
 
-/* GLOW */
 .active::before {
   content:"";
   position:absolute;
@@ -83,12 +83,18 @@ body {
   transform: scale(0.85);
 }
 
-/* FRAME */
+/* FRAME FIX */
 #frame {
   transition: opacity 0.25s ease;
+  position: relative;
+  z-index: 1;
 }
 
 /* MODAL */
+#requestPopup {
+  z-index: 999;
+}
+
 .glass-card {
   background: rgba(255,255,255,0.06);
   backdrop-filter: blur(25px);
@@ -164,10 +170,10 @@ if(!localStorage.getItem("user")){
 
     </div>
 
-    <!-- 🔔 -->
-    <div class="relative">
+    <!-- 🔔 FIXED -->
+    <div class="relative z-30">
       <button onclick="toggleRequests()"
-        class="text-xl hover:scale-110 transition">
+        class="text-xl hover:scale-110 transition relative z-30">
         🔔
       </button>
 
@@ -206,7 +212,7 @@ if(!localStorage.getItem("user")){
 
 <!-- MODAL -->
 <div id="requestPopup"
-class="hidden fixed inset-0 z-50 flex items-center justify-center
+class="hidden fixed inset-0 flex items-center justify-center
 bg-black/70 backdrop-blur-sm">
 
   <div class="glass-card w-[90%] max-w-sm p-5 animate-modal">

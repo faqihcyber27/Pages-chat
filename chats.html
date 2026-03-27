@@ -36,14 +36,79 @@ body {background:#020617;color:white;}
 <div v-if="pinnedChats.length" class="px-4 mt-4">
   <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
 
+  <div v-if="pinnedChats.length" class="px-4 mt-4">
+  <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
+
   <div v-for="c in pinnedChats"
-       @click="openChat(c)"
-       class="chat-card p-3 mb-2 rounded-xl flex justify-between">
+     @click="handleClick(c)"
+     @touchstart="startPress(c, $event)"
+     @touchend="endPress"
+     @touchmove="cancelPress"
+     class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer border border-yellow-400/20">
 
-    <p>{{getName(c)}}</p>
+    <!-- LEFT -->
+    <div class="flex items-center gap-3">
 
-    <button @click.stop="togglePin(c)" class="text-yellow-400">⭐</button>
+      <img v-if="c.friend_avatar"
+        :src="c.friend_avatar"
+        class="w-10 h-10 rounded-full object-cover">
+
+      <div v-else
+        :style="{ background: getColor(getName(c)) }"
+        class="w-10 h-10 rounded-full flex items-center justify-center">
+        {{ getInitial(getName(c)) }}
+      </div>
+
+      <div>
+
+        <p class="font-semibold flex items-center gap-2">
+          {{ getName(c) }}
+
+          <span v-if="isOnline(c.friend_email)"
+            class="w-2 h-2 bg-green-400 rounded-full"></span>
+
+          <!-- ICON PIN -->
+          <span class="text-yellow-400 text-xs">📌</span>
+        </p>
+
+        <p class="text-sm opacity-60">
+
+          <span v-if="typingUsers[c.friend_email]" class="text-green-400">
+            sedang mengetik...
+          </span>
+
+          <span v-else-if="c.last_message">
+            {{c.last_message}}
+          </span>
+
+          <span v-else>No message</span>
+
+        </p>
+
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="text-right">
+
+      <p class="text-xs opacity-50">
+        {{formatTime(c.updated_at)}}
+      </p>
+
+      <button @click.stop="togglePin(c)"
+        class="text-yellow-400">
+        ⭐
+      </button>
+
+      <div v-if="c.unread>0"
+        class="bg-red-500 text-xs px-2 rounded-full mt-1">
+        {{c.unread}}
+      </div>
+
+    </div>
+
   </div>
+</div>
 </div>
 
 <!-- LIST -->

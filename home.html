@@ -222,8 +222,10 @@ function renderRequests(){
   el.innerHTML = requests.map(r=>`
     <div class="request-card mb-2">
 
-      <div>
-        <p class="text-sm">${r.from_email}</p>
+      <div class="flex items-center gap-2">
+        <img src="${r.avatar || 'https://i.pravatar.cc/40'}"
+           class="w-8 h-8 rounded-full">
+        <p class="text-sm">${r.name || r.from_email}</p>
       </div>
 
       <div class="flex gap-2">
@@ -267,6 +269,12 @@ ws.onopen = ()=>{
     type:"online",
     user:user.email
   }))
+
+  // 🔥 TAMBAHAN WAJIB
+  ws.send(JSON.stringify({
+    type:"init_requests",
+    user:user.email
+  }))
 }
 
 ws.onmessage = (e)=>{
@@ -280,11 +288,11 @@ ws.onmessage = (e)=>{
   }
 
   // ➕ NEW REQUEST
-  if(msg.type==="new_request"){
-    requests.unshift(msg.data)
-    updateBadge()
-    renderRequests()
-  }
+  if(msg.type==="new_request" && msg.data.to_email === user.email){
+  requests.unshift(msg.data)
+  updateBadge()
+  renderRequests()
+}
 
   // ❌ REMOVE
   if(msg.type==="request_update"){
@@ -294,7 +302,7 @@ ws.onmessage = (e)=>{
   }
 
   // 🎉 ACCEPT TOAST
-  if(msg.type==="request_accepted"){
+  if(msg.type==="request_accepted" && msg.to === user.email){
     showToast(msg.name + " menerima pertemanan 🎉")
   }
 }

@@ -271,10 +271,12 @@ async saveProfile(){
       bio:this.user.bio,
       avatar:this.user.avatar
     }))
+    this.showToastMsg("Saving... 🚀")
+  } else {
+    this.showToastMsg("WebSocket not ready ❌")
   }
-
+    
   localStorage.setItem("user", JSON.stringify(this.user))
-
   this.loading = false
 },
 

@@ -136,6 +136,12 @@ this.ws.onopen = () => {
     type:"online",
     user:this.user.email
   }))
+  
+  this.ws.send(JSON.stringify({
+  type:"read",
+  room:this.room,
+  user:this.user.email
+}))
 }
 
 this.ws.onmessage = (e)=>{
@@ -152,6 +158,12 @@ this.ws.onmessage = (e)=>{
   if(msg.type==="message"){
 
     if(msg.room !== this.room) return
+    if(this.messages.find(m =>
+    m.created_at === msg.created_at &&
+    m.sender === msg.sender
+  )) return
+
+  this.messages.push(msg)
 
     const last = this.messages[this.messages.length - 1]
 
@@ -182,6 +194,15 @@ this.ws.onmessage = (e)=>{
       this.typingUser=''
     },1000)
   }
+  
+  if(msg.type === "read_update"){
+  if(msg.room === this.room){
+    this.messages = this.messages.map(m => ({
+      ...m,
+      is_read:1
+    }))
+  }
+}
 
 }
 

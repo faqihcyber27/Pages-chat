@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
@@ -179,6 +180,49 @@ class="hidden fixed inset-0 flex items-center justify-center bg-black/70">
 const API="https://worker-chat.jihadwajib68.workers.dev"
 const user = JSON.parse(localStorage.getItem("user"))
 
+// 🔥 FIREBASE INIT
+const firebaseConfig = {
+  apiKey: "AIzaSyCASPxiCM8V8OIzw3JaeTdGreID0EMyTMk",
+  authDomain: "chat-realtime-7b092.firebaseapp.com",
+  projectId: "chat-realtime-7b092",
+  storageBucket: "chat-realtime-7b092.firebasestorage.app",
+  messagingSenderId: "424831780632",
+  appId: "1:424831780632:web:6e42d806ea94392778406d"
+}
+
+firebase.initializeApp(firebaseConfig)
+
+const messaging = firebase.messaging()
+
+// 🔥 NOTIFICATION SETUP
+async function initNotification(){
+  const permission = await Notification.requestPermission()
+
+  if(permission === "granted"){
+    subscribeUser()
+  }
+}
+
+async function subscribeUser(){
+
+  if(localStorage.getItem("subscribed")) return
+
+  const reg = await navigator.serviceWorker.ready
+
+  const sub = await reg.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: "PUBLIC_VAPID_KEY"
+  })
+
+  await fetch(API + "/subscribe", {
+    method: "POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(sub)
+  })
+
+  localStorage.setItem("subscribed","1")
+}
+
 document.getElementById("username").innerText =
   "Hi, " + user.name
 
@@ -259,10 +303,49 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove("show"),2000)
 }
 
+// 🔥 INIT FCM
+async function initFCM(){
+
+  const permission = await Notification.requestPermission()
+
+  if(permission !== "granted"){
+    console.log("notif ditolak")
+    return
+  }
+
+  const token = await messaging.getToken({
+    vapidKey: "ISI_VAPID_KEY_KAMU"
+  })
+
+  console.log("TOKEN:", token)
+
+  await fetch(API + "/save-token", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      token,
+      email: user.email
+    })
+  })
+}
+
 //// 🔥 WEBSOCKET GLOBAL
 const ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
+
+// 🔥 REGISTER SW
+navigator.serviceWorker.register("/firebase-messaging-sw.js")
+
+// 🔥 START FCM
+initFCM()
+
+// REGISTER SERVICE WORKER
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js").then(()=>{
+    initNotification()
+  })
+}
 
 ws.onopen = ()=>{
   ws.send(JSON.stringify({
@@ -292,6 +375,15 @@ ws.onmessage = (e)=>{
   requests.unshift(msg.data)
   updateBadge()
   renderRequests()
+}
+
+if(msg.type==="push_notification"){
+
+  if(Notification.permission === "granted"){
+    new Notification(msg.title, {
+      body: msg.body
+    })
+  }
 }
 
   if(msg.type === "contact_request"){

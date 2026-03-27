@@ -222,7 +222,7 @@ this.wsGlobal = new WebSocket(
 
 setInterval(()=>{
   this.loadChats()
-},5000)
+},1500)
 
 this.wsGlobal.onopen = ()=>{
   this.wsGlobal.send(JSON.stringify({
@@ -290,6 +290,7 @@ async deleteChat(){
   // 🔥 hapus dari UI langsung (tanpa reload)
   this.chats = this.chats.filter(c =>
     c.friend_email !== this.selectedChat.friend_email
+    this.loadChats()
   )
 
   this.selectedChat = null
@@ -381,8 +382,29 @@ this.wsRooms[room]=ws
 },
 
 async loadChats(){
-const res = await fetch(API+"/chats?email="+this.user.email)
-this.chats = await res.json()
+
+  const res = await fetch(API+"/chats?email="+this.user.email)
+  const newChats = await res.json()
+
+  // 🔥 merge (biar gak flicker & tetap realtime)
+  const map = new Map()
+
+  // simpan lama
+  this.chats.forEach(c=>{
+    map.set(c.friend_email, c)
+  })
+
+  // update dari server
+  newChats.forEach(c=>{
+    map.set(c.friend_email, {
+      ...map.get(c.friend_email),
+      ...c
+    })
+  })
+
+  // 🔥 hasil akhir
+  this.chats = Array.from(map.values())
+
 },
 
 openChat(c){

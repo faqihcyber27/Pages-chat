@@ -54,8 +54,6 @@ class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
 <!-- CONTACT LIST -->
 <div v-for="c in filteredContacts"
      @click="startChat(c)"
-     @touchstart="startPress(c)"
-     @touchend="cancelPress"
      class="contact-card p-3 mb-3 rounded-2xl flex items-center justify-between cursor-pointer">
 
   <div class="flex items-center gap-3">

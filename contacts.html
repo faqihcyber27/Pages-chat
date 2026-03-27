@@ -29,7 +29,6 @@ body {background:#020617;color:white;}
   transform: scale(1.1);
 }
 
-/* 🔥 ANIMASI */
 @keyframes scaleIn{
   from{transform:scale(0.8);opacity:0}
   to{transform:scale(1);opacity:1}
@@ -121,7 +120,7 @@ class="fixed inset-0 bg-black/70 flex items-center justify-center">
 
 </div>
 
-<!-- 🔥 PROFILE MODAL (NEW) -->
+<!-- PROFILE MODAL -->
 <div v-if="selectedProfile"
 class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
@@ -182,8 +181,6 @@ friendEmail:'',
 showModal:false,
 onlineUsers:[],
 ws:null,
-
-// 🔥 NEW
 selectedProfile:null
 }
 },
@@ -200,6 +197,7 @@ async mounted(){
 
 this.loadContacts()
 
+// 🔥 GLOBAL ONLINE (SAMA DENGAN CHAT)
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -250,17 +248,22 @@ async sendRequest(){
   alert("Request sent")
 },
 
+// 🔥 FIX UTAMA (SINKRON CHAT.HTML)
 startChat(c){
+
   localStorage.setItem("activeChat", JSON.stringify({
-    email:c.email,
-    name:c.name,
-    avatar:c.avatar,
-    bio:c.bio
+    email: c.email,
+    name: c.name,
+    avatar: c.avatar || null,
+    bio: c.bio || "",
+    last_seen: c.last_seen || null
   }))
-  location.href="chat.html"
+
+  setTimeout(()=>{
+    window.location.href = "chat.html"
+  },100)
 },
 
-// 🔥 UPDATED (NO ALERT)
 viewProfile(c){
   this.selectedProfile = c
 },

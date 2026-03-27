@@ -197,7 +197,7 @@ async mounted(){
 
 this.loadContacts()
 
-// 🔥 GLOBAL ONLINE (SAMA DENGAN CHAT)
+// 🔥 GLOBAL ONLINE
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -248,7 +248,7 @@ async sendRequest(){
   alert("Request sent")
 },
 
-// 🔥 FIX UTAMA (SINKRON CHAT.HTML)
+// 🔥 FIX UTAMA (KELUAR DARI IFRAME)
 startChat(c){
 
   localStorage.setItem("activeChat", JSON.stringify({
@@ -259,9 +259,7 @@ startChat(c){
     last_seen: c.last_seen || null
   }))
 
-  setTimeout(()=>{
-    window.location.href = "chat.html"
-  },100)
+  window.top.location.href = "chat.html"
 },
 
 viewProfile(c){

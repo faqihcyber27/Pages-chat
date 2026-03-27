@@ -15,6 +15,9 @@ body {background:#020617;color:white;}
   backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.08);
   transition: 0.3s;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .chat-card:hover {transform: scale(1.02);}
 
@@ -37,7 +40,7 @@ body {background:#020617;color:white;}
     class="w-full p-3 rounded-xl bg-white/10 border border-white/10">
 </div>
 
-<!-- 📌 PINNED -->
+<!-- PINNED -->
 <div v-if="pinnedChats.length" class="px-4 mt-4">
   <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
 
@@ -52,12 +55,14 @@ body {background:#020617;color:white;}
 </div>
 
 <!-- LIST -->
-<div class="flex-1 overflow-auto px-4 mt-4">
+<div class="flex-1 overflow-auto px-4 mt-4"
+     @scroll="cancelPress">
 
   <div v-for="c in normalChats"
      @click="openChat(c)"
-     @touchstart="startPress(c)"
+     @touchstart="startPress(c, $event)"
      @touchend="cancelPress"
+     @touchmove="cancelPress"
      class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
 
     <div class="flex items-center gap-3">
@@ -100,10 +105,6 @@ body {background:#020617;color:white;}
 
           <span v-else-if="c.last_message">
             {{c.last_message}}
-            <span class="ml-1 text-xs">
-              <span v-if="c.unread==0">✓✓</span>
-              <span v-else>✓</span>
-            </span>
           </span>
 
           <span v-else>No message</span>
@@ -137,7 +138,7 @@ body {background:#020617;color:white;}
 
 </div>
 
-<!-- ✅ MODAL DI LUAR -->
+<!-- MODAL -->
 <div v-if="selectedChat"
 class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 
@@ -191,17 +192,9 @@ normalChats(){
 }
 },
 
-watch:{
-chats(newVal, oldVal){
-  if(!oldVal || newVal.length !== oldVal.length){
-    this.$nextTick(()=>{
-      this.initRoomSockets()
-    })
-  }
-}
-},
-
 mounted(){
+
+this.selectedChat = null
 
 this.loadChats().then(()=>{
   this.initRoomSockets()
@@ -218,15 +211,6 @@ this.wsGlobal.onopen = ()=>{
     type:"online",
     user:this.user.email
   }))
-
-  setInterval(()=>{
-    if(this.wsGlobal.readyState===1){
-      this.wsGlobal.send(JSON.stringify({
-        type:"online",
-        user:this.user.email
-      }))
-    }
-  },5000)
 }
 
 this.wsGlobal.onmessage = (e)=>{
@@ -242,8 +226,9 @@ methods:{
 
 togglePin(c){
   const i = this.pinned.indexOf(c.friend_email)
-  if(i>-1){ this.pinned.splice(i,1) }
-  else{ this.pinned.push(c.friend_email) }
+  if(i>-1) this.pinned.splice(i,1)
+  else this.pinned.push(c.friend_email)
+
   localStorage.setItem("pinned", JSON.stringify(this.pinned))
 },
 
@@ -251,15 +236,24 @@ isPinned(email){
   return this.pinned.includes(email)
 },
 
-startPress(c){
+// 🔥 FIX LONG PRESS
+startPress(c, e){
+
+  if(!e || !e.touches || e.touches.length !== 1) return
+
+  this.cancelPress()
+
   this.pressTimer = setTimeout(()=>{
     this.selectedChat = c
     navigator.vibrate?.(50)
-  },600)
+  },700)
 },
 
 cancelPress(){
-  clearTimeout(this.pressTimer)
+  if(this.pressTimer){
+    clearTimeout(this.pressTimer)
+    this.pressTimer = null
+  }
 },
 
 async deleteChat(){
@@ -284,7 +278,6 @@ async deleteChat(){
     c.friend_email !== this.selectedChat.friend_email
   )
 
-  this.loadChats()
   this.selectedChat = null
 },
 
@@ -325,6 +318,7 @@ if(!msg.type || msg.type==="message"){
   if(chat){
     chat.last_message = msg.text || "📎 File"
     chat.updated_at = msg.created_at
+
     if(msg.sender !== this.user.email){
       chat.unread = (chat.unread||0)+1
     }
@@ -334,11 +328,6 @@ if(!msg.type || msg.type==="message"){
       ...this.chats.filter(x=>x.friend_email!==friend)
     ]
   }
-}
-
-if(msg.type==="read"){
-  const chat = this.chats.find(x=>x.friend_email===msg.user)
-  if(chat) chat.unread=0
 }
 
 }
@@ -379,17 +368,12 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify({room,user:this.user.email})
 })
 
-c.unread=0
-
 localStorage.setItem("activeChat", JSON.stringify({
   email:c.friend_email,
-  name:c.friend_name,
-  avatar:c.friend_avatar,
-  bio:c.friend_bio,
-  last_seen:c.friend_last_seen
+  name:c.friend_name
 }))
 
-parent.location.href="chat.html"
+location.href="chat.html"
 },
 
 getName(c){ return c.friend_name || c.friend_email },

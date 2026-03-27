@@ -175,9 +175,12 @@ normalChats(){
 
 mounted(){
 
-this.loadChats()
+// 🔥 WAJIB: load + init socket
+this.loadChats().then(()=>{
+  this.initRoomSockets()
+})
 
-// 🔥 GLOBAL ONLINE (AMBIL DARI HOME)
+// 🔥 GLOBAL ONLINE
 this.wsGlobal = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -224,30 +227,40 @@ isPinned(email){
   return this.pinned.includes(email)
 },
 
+// 🔥 FIX UTAMA REALTIME
 initRoomSockets(){
 
 this.chats.forEach(c=>{
 
 const room = [this.user.email,c.friend_email].sort().join("_")
+
 if(this.wsRooms[room]) return
 
 const ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room="+room
 )
 
+ws.onopen = ()=>{
+  console.log("WS READY:", room)
+}
+
 ws.onmessage = (e)=>{
 const msg = JSON.parse(e.data)
 
-// ✅ TYPING FIX (FILTER ROOM)
+// ================= TYPING =================
 if(msg.type==="typing"){
+
   if(msg.sender===this.user.email) return
   if(msg.room !== room) return
 
   this.typingUsers[msg.sender]=true
-  setTimeout(()=>delete this.typingUsers[msg.sender],1000)
+
+  setTimeout(()=>{
+    delete this.typingUsers[msg.sender]
+  },1200)
 }
 
-// ✅ MESSAGE REALTIME
+// ================= MESSAGE =================
 if(msg.type==="message"){
 
   let friend
@@ -262,6 +275,7 @@ if(msg.type==="message"){
   const chat = this.chats.find(x=>x.friend_email===friend)
 
   if(chat){
+
     chat.last_message = msg.text || "📎 File"
     chat.updated_at = msg.created_at
 
@@ -269,16 +283,26 @@ if(msg.type==="message"){
       chat.unread = (chat.unread||0)+1
     }
 
-    this.chats = this.chats.filter(x=>x.friend_email!==friend)
-    this.chats.unshift(chat)
+    // 🔥 FORCE REACTIVE UPDATE
+    this.chats = [
+      chat,
+      ...this.chats.filter(x=>x.friend_email!==friend)
+    ]
+
   }
+
 }
 
+// ================= READ =================
 if(msg.type==="read"){
   const chat = this.chats.find(x=>x.friend_email===msg.user)
   if(chat) chat.unread=0
 }
 
+}
+
+ws.onclose = ()=>{
+  delete this.wsRooms[room]
 }
 
 this.wsRooms[room]=ws
@@ -290,10 +314,6 @@ this.wsRooms[room]=ws
 async loadChats(){
 const res = await fetch(API+"/chats?email="+this.user.email)
 this.chats = await res.json()
-
-this.$nextTick(()=>{
-  this.initRoomSockets()
-})
 },
 
 openChat(c){
@@ -353,7 +373,7 @@ d.getMinutes().toString().padStart(2,'0')
 }
 
 }).mount("#app")
-</script>
+  </script>
 
 </body>
 </html>

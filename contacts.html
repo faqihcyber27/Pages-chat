@@ -16,10 +16,7 @@ body {background:#020617;color:white;}
   border: 1px solid rgba(255,255,255,0.08);
   transition: 0.3s;
 }
-
-.contact-card:hover {
-  transform: scale(1.02);
-}
+.contact-card:hover {transform: scale(1.02);}
 
 .action-btn {
   background: rgba(255,255,255,0.08);
@@ -27,10 +24,15 @@ body {background:#020617;color:white;}
   border-radius: 10px;
   transition: 0.2s;
 }
-
 .action-btn:hover {
   background: rgba(255,255,255,0.15);
   transform: scale(1.1);
+}
+
+/* 🔥 ANIMASI */
+@keyframes scaleIn{
+  from{transform:scale(0.8);opacity:0}
+  to{transform:scale(1);opacity:1}
 }
 </style>
 
@@ -55,7 +57,6 @@ class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
      @click="startChat(c)"
      class="contact-card p-3 mb-3 rounded-2xl flex items-center justify-between cursor-pointer">
 
-  <!-- LEFT -->
   <div class="flex items-center gap-3">
 
     <img :src="c.avatar || 'https://i.pravatar.cc/40'"
@@ -93,7 +94,7 @@ class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
 
 </div>
 
-<!-- ADD FRIEND MODAL -->
+<!-- ADD FRIEND -->
 <div v-if="showModal"
 class="fixed inset-0 bg-black/70 flex items-center justify-center">
 
@@ -120,6 +121,47 @@ class="fixed inset-0 bg-black/70 flex items-center justify-center">
 
 </div>
 
+<!-- 🔥 PROFILE MODAL (NEW) -->
+<div v-if="selectedProfile"
+class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+
+  <div class="bg-white/10 backdrop-blur-xl border border-white/10
+              p-6 rounded-2xl w-80 text-center animate-[scaleIn_.2s]">
+
+    <img :src="selectedProfile.avatar || 'https://i.pravatar.cc/150'"
+      class="w-24 h-24 rounded-full mx-auto mb-3 object-cover border border-white/20">
+
+    <h2 class="text-lg font-semibold">
+      {{selectedProfile.name}}
+    </h2>
+
+    <p class="text-sm mt-1"
+       :class="isOnline(selectedProfile.email) ? 'text-green-400' : 'opacity-50'">
+      {{ isOnline(selectedProfile.email) ? '🟢 Online' : 'Offline' }}
+    </p>
+
+    <p class="text-sm opacity-60 mt-2">
+      {{selectedProfile.bio || 'No bio'}}
+    </p>
+
+    <div class="flex gap-2 mt-4">
+
+      <button @click="startChat(selectedProfile)"
+        class="bg-purple-600 flex-1 p-2 rounded-lg">
+        Chat
+      </button>
+
+      <button @click="selectedProfile=null"
+        class="bg-gray-600 flex-1 p-2 rounded-lg">
+        Close
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
 </div>
 
 <script>
@@ -139,7 +181,10 @@ search:'',
 friendEmail:'',
 showModal:false,
 onlineUsers:[],
-ws:null
+ws:null,
+
+// 🔥 NEW
+selectedProfile:null
 }
 },
 
@@ -155,7 +200,6 @@ async mounted(){
 
 this.loadContacts()
 
-// 🔥 GLOBAL ONLINE (SAMA KAYAK HOME)
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -216,8 +260,9 @@ startChat(c){
   location.href="chat.html"
 },
 
+// 🔥 UPDATED (NO ALERT)
 viewProfile(c){
-  alert("Profile: " + c.name)
+  this.selectedProfile = c
 },
 
 isOnline(email){

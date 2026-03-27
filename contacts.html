@@ -245,7 +245,7 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
 </div>
 
 <script>
-const API="https://worker-chat.jihadwajib68.workers.dev"
+const WS_URL="wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 
 if(!localStorage.getItem("user")){
   location.href="index.html"
@@ -263,6 +263,7 @@ showModal:false,
 onlineUsers:[],
 ws:null,
 selectedProfile:null,
+selectedContact:null,
 showToast:false,
 toastMessage:""
 }
@@ -276,39 +277,58 @@ return this.contacts.filter(c =>
 }
 },
 
-async mounted(){
+mounted(){
 
-this.loadContacts()
-
-setInterval(()=>{
-  this.loadContacts()
-},2000)
-
-this.ws = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
-)
+// 🔥 CONNECT WS GLOBAL
+this.ws = new WebSocket(WS_URL)
 
 this.ws.onopen = ()=>{
+
+  // ONLINE
   this.ws.send(JSON.stringify({
     type:"online",
     user:this.user.email
   }))
 
-  setInterval(()=>{
-    if(this.ws.readyState===1){
-      this.ws.send(JSON.stringify({
-        type:"online",
-        user:this.user.email
-      }))
-    }
-  },2000)
+  // 🔥 INIT CONTACTS (WAJIB)
+  this.ws.send(JSON.stringify({
+    type:"init_contacts",
+    user:this.user.email
+  }))
 }
 
+// 🔥 LISTENER
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
+
+  // ================= CONTACTS =================
+  if(msg.type==="init_contacts"){
+    this.contacts = msg.contacts || []
+    return
+  }
+
+  // 🔥 REALTIME UPDATE CONTACT
+  if(msg.type==="contact_update"){
+    this.ws.send(JSON.stringify({
+      type:"init_contacts",
+      user:this.user.email
+    }))
+    return
+  }
+
+  // ================= ONLINE =================
   if(msg.type==="online_list"){
     this.onlineUsers = msg.users || []
+    return
   }
+
+  // 🔥 NOTIF FRIEND ACCEPT
+  if(msg.type==="friend_accepted"){
+    if(msg.to === this.user.email){
+      this.showToastMsg(msg.name + " menerima pertemanan 🎉")
+    }
+  }
+
 }
 
 },
@@ -321,15 +341,8 @@ showToastMsg(msg){
   setTimeout(()=> this.showToast=false,2000)
 },
 
-async loadContacts(){
-  const res = await fetch(API+"/contacts?email="+this.user.email)
-  const newContacts = await res.json()
-  this.contacts = []
-  setTimeout(()=>{ this.contacts = newContacts },0)
-},
-
 async sendRequest(){
-  await fetch(API+"/send-request",{
+  await fetch("https://worker-chat.jihadwajib68.workers.dev/send-request",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
@@ -353,7 +366,7 @@ startChat(c){
 },
 
 async deleteContact(){
-  await fetch(API+"/delete-contact",{
+  await fetch("https://worker-chat.jihadwajib68.workers.dev/delete-contact",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
@@ -361,9 +374,12 @@ async deleteContact(){
       friend_email:this.selectedContact.email
     })
   })
-  this.contacts = this.contacts.filter(c =>
-    c.email !== this.selectedContact.email
-  )
+
+  // 🔥 realtime trigger
+  this.ws.send(JSON.stringify({
+    type:"contact_update"
+  }))
+
   this.selectedContact = null
   this.showToastMsg("Contact deleted 🗑")
 },

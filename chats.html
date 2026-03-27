@@ -66,16 +66,13 @@ body {background:#020617;color:white;}
       <!-- INFO -->
       <div>
 
-        <!-- NAME + ONLINE -->
         <p class="font-semibold flex items-center gap-2">
           {{ getName(c) }}
 
-          <!-- ONLINE -->
           <span v-if="isOnline(getFriendEmail(c))"
             class="w-2 h-2 bg-green-400 rounded-full"></span>
         </p>
 
-        <!-- STATUS -->
         <p class="text-xs opacity-50">
           <span v-if="!isOnline(getFriendEmail(c))">
             🕒 {{ formatLastSeen(c.friend_last_seen) }}
@@ -85,7 +82,6 @@ body {background:#020617;color:white;}
           </span>
         </p>
 
-        <!-- MESSAGE -->
         <p class="text-sm mt-1"
           :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-60'">
 
@@ -106,12 +102,10 @@ body {background:#020617;color:white;}
     <!-- RIGHT -->
     <div class="text-right flex flex-col items-end gap-1">
 
-      <!-- TIME -->
       <p class="text-xs opacity-50">
         {{formatTime(c.updated_at)}}
       </p>
 
-      <!-- ⭐ FAVORITE -->
       <button 
         @click.stop="toggleFav(c)"
         :class="isFav(c.friend_email) ? 'text-yellow-400' : 'opacity-40'"
@@ -119,7 +113,6 @@ body {background:#020617;color:white;}
         ⭐
       </button>
 
-      <!-- UNREAD -->
       <div v-if="c.unread > 0"
         class="bg-red-500 text-xs px-2 py-1 rounded-full">
         {{c.unread}}
@@ -174,11 +167,10 @@ filteredChats(){
 }
 },
 
-async mounted(){
+mounted(){
 
-await this.loadChats()
-
-setInterval(()=>this.loadChats(),3000)
+// ⚡ load awal (tanpa blocking)
+this.loadChats()
 
 // GLOBAL WS (ONLINE)
 this.wsGlobal = new WebSocket(
@@ -275,14 +267,35 @@ initRoomSockets(){
     ws.onmessage = (e)=>{
       const msg = JSON.parse(e.data)
 
+      // 🔥 typing realtime
       if(msg.type==="typing"){
         if(msg.sender === this.user.email) return
         this.typingUsers[msg.sender] = true
-        setTimeout(()=>delete this.typingUsers[msg.sender],1500)
+        setTimeout(()=>delete this.typingUsers[msg.sender],800)
       }
 
+      // 🚀 MESSAGE REALTIME (NO FETCH)
       if(msg.type==="message"){
-        this.loadChats()
+
+        const index = this.chats.findIndex(c =>
+          this.getFriendEmail(c) === msg.sender
+        )
+
+        if(index !== -1){
+
+          const chat = this.chats[index]
+
+          chat.last_message = msg.text || (msg.file ? "📎 File" : "")
+          chat.updated_at = msg.created_at
+          chat.unread = (chat.unread || 0) + 1
+
+          // pindah ke atas
+          this.chats.splice(index,1)
+          this.chats.unshift(chat)
+
+        }else{
+          this.loadChats()
+        }
       }
     }
 
@@ -291,7 +304,8 @@ initRoomSockets(){
 },
 
 async loadChats(){
-  this.chats = await (await fetch(API+"/chats?email="+this.user.email)).json()
+  const res = await fetch(API+"/chats?email="+this.user.email)
+  this.chats = await res.json()
 
   this.$nextTick(()=>{
     this.initRoomSockets()

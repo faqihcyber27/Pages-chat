@@ -4,82 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- 🔥 FIX CDN -->
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-
-/* smooth scroll feel */
-html {
-  scroll-behavior: smooth;
-}
-
-/* bubble hover */
-.me:hover, .them:hover {
-  transform: scale(1.02);
-}
-
-.header-glow::before {
-  content:"";
-  position:absolute;
-  inset:0;
-  background: radial-gradient(circle at top left, rgba(255,255,255,0.2), transparent 60%);
-  pointer-events:none;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(20px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-.animate-fadeIn {
-  animation: fadeIn 0.3s ease;
-}
-
 body {
   background: linear-gradient(180deg, #0f172a, #020617);
   color: white;
-  position: relative;
 }
-
-/* subtle pattern */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px);
-  background-size: 25px 25px;
-  pointer-events: none;
-}
-
-.msg-enter {
-  opacity: 0;
-  transform: translateY(10px);
-  animation: msgIn 0.3s ease forwards;
-}
-
-@keyframes msgIn {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.me {
-  box-shadow: 0 6px 20px rgba(124,58,237,0.4);
-}
-
-.them {
-  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
-
 </style>
 </head>
 
@@ -87,139 +19,48 @@ body::before {
 
 <div id="app" class="h-screen flex flex-col">
 
-<!-- IMAGE PREVIEW -->
-<div v-if="previewImage"
-     class="fixed inset-0 bg-black/90 flex items-center justify-center z-50"
-     @click="previewImage=null">
-  <img :src="previewImage" class="max-w-full max-h-full rounded-lg">
-</div>
-
-<!-- PROFILE -->
-<div v-if="showProfile"
-  class="fixed inset-0 z-50 flex flex-col items-center justify-between
-  bg-gradient-to-b from-black/80 via-[#020617]/95 to-black/90
-  backdrop-blur-xl animate-fadeIn"
-  
-  @click="showProfile=false"
-
-  @touchstart="touchStartY = $event.touches[0].clientY"
-  @touchmove="handleSwipe($event)"
->
-
-  <!-- TOP AREA -->
-  <div class="w-full pt-16 flex flex-col items-center">
-
-    <!-- AVATAR GLOW -->
-    <div class="relative">
-      <div class="absolute inset-0 rounded-full blur-2xl bg-purple-500/40"></div>
-
-      <img :src="chat.avatar || defaultAvatar"
-        class="w-40 h-40 rounded-full object-cover relative z-10
-        ring-4 ring-white/10 shadow-2xl">
-    </div>
-
-    <!-- NAME -->
-    <p class="text-2xl font-bold mt-4 tracking-wide">
-      {{chat.name || chat.email}}
-    </p>
-
-    <!-- STATUS -->
-    <p class="text-sm opacity-70 mt-2">
-      {{chat.bio || 'Available'}}
-    </p>
-
-    <!-- ONLINE -->
-    <p class="text-xs mt-2">
-      <span v-if="onlineUsers.includes(chat.email)"
-        class="text-green-400">● Online</span>
-      <span v-else>
-        {{ formatLastSeen(lastSeenMap[chat.email]) }}
-      </span>
-    </p>
-
-  </div>
-
-  <!-- ACTION BUTTON -->
-  <div class="w-full px-6 pb-10 flex gap-4">
-
-    <!-- CHAT -->
-    <button @click.stop="showProfile=false"
-      class="flex-1 py-3 rounded-2xl
-      bg-gradient-to-r from-purple-600 to-indigo-500
-      shadow-lg active:scale-95 transition">
-      💬 Chat
-    </button>
-
-    <!-- CALL -->
-    <button @click.stop="alert('Coming soon')"
-      class="flex-1 py-3 rounded-2xl
-      bg-white/10 backdrop-blur border border-white/10
-      active:scale-95 transition">
-      📞 Call
-    </button>
-
-  </div>
-
-</div>
-
 <!-- HEADER -->
-<div class="header-glow relative p-4 flex items-center gap-3 
-  bg-gradient-to-r from-purple-600/80 via-indigo-500/70 to-pink-500/80
-  backdrop-blur-xl border-b border-white/10 shadow-lg">
+<div class="p-4 flex items-center gap-3 bg-purple-600">
 
   <button onclick="history.back()">←</button>
 
   <img :src="chat.avatar || defaultAvatar"
-       @click="showProfile=true"
-       class="w-11 h-11 rounded-full object-cover ring-2 ring-white/20 shadow-md">
+       class="w-10 h-10 rounded-full object-cover">
 
   <div class="flex-1">
-    <p class="font-semibold">
-      {{chat.name || chat.email}}
-    </p>
-
-    <p class="text-xs opacity-70">
-      <span v-if="onlineUsers.includes(chat.email)"
-        class="text-green-400">● online</span>
-      <span v-else>
-        {{ formatLastSeen(lastSeenMap[chat.email]) }}
+    <p class="font-semibold">{{chat.name || chat.email}}</p>
+    <p class="text-xs">
+      <span v-if="onlineUsers.includes(chat.email)" class="text-green-300">
+        online
       </span>
+      <span v-else>offline</span>
     </p>
   </div>
 
 </div>
 
 <!-- CHAT -->
-<div ref="chatBox"
-     class="flex-1 overflow-auto px-3 py-4 space-y-3 pb-24">
+<div ref="chatBox" class="flex-1 overflow-auto p-3 space-y-2">
 
   <div v-for="(m,i) in messages"
        :key="i"
        :class="m.sender===user.email ? 'flex justify-end' : 'flex'">
 
     <div :class="[
-      'msg-enter',
-      'px-4 py-3 rounded-3xl max-w-[75%] shadow-md transition-all duration-300', m.sender===user.email
-    ? 'bg-gradient-to-br from-purple-600 to-indigo-500 text-white shadow-purple-500/30'
-    : 'bg-white/10 backdrop-blur text-white border border-white/10'
+      'px-4 py-2 rounded-2xl max-w-[70%]',
+      m.sender===user.email ? 'bg-purple-600' : 'bg-white/10'
     ]">
 
       <div v-if="m.file">
         <img v-if="m.file_type && m.file_type.includes('image')"
              :src="m.file"
-             @click="openImage(m.file)"
-             class="rounded-lg max-w-[200px] cursor-pointer">
-
-        <a v-else :href="m.file" download class="underline text-blue-400">
-          {{m.file_name}}
-        </a>
+             class="rounded max-w-[200px]">
       </div>
 
-      <div v-else>
-        {{m.text}}
-        <div class="text-[10px] text-right mt-1 opacity-60 flex justify-end gap-1">
-          {{ formatTime(m.created_at) }}
-        </div>
+      <div v-else>{{m.text}}</div>
+
+      <div class="text-[10px] opacity-60 text-right mt-1">
+        {{ formatTime(m.created_at) }}
       </div>
 
     </div>
@@ -228,74 +69,42 @@ body::before {
 </div>
 
 <!-- TYPING -->
-<div v-if="typingUser"
-  class="text-xs px-4 pb-2 text-green-400 flex items-center gap-1">
-
-  <span>{{typingUser}}</span>
-
-  <span class="flex gap-1">
-    <span class="w-1 h-1 bg-green-400 rounded-full animate-bounce"></span>
-    <span class="w-1 h-1 bg-green-400 rounded-full animate-bounce delay-100"></span>
-    <span class="w-1 h-1 bg-green-400 rounded-full animate-bounce delay-200"></span>
-  </span>
-
+<div v-if="typingUser" class="text-xs px-4 text-green-400">
+  {{typingUser}} sedang mengetik...
 </div>
 
 <!-- INPUT -->
-<div class="fixed bottom-4 left-1/2 -translate-x-1/2 w-[95%]
-  flex gap-2 px-3 py-2 rounded-2xl
-  bg-white/10 backdrop-blur-xl border border-white/10 shadow-lg">
-
-  <input type="file" hidden ref="file" @change="sendFile">
-  <button @click="$refs.file.click()">📎</button>
-
-  <button @click="toggleEmoji">😊</button>
+<div class="p-3 flex gap-2 bg-black/40">
 
   <input v-model="text"
          @input="sendTyping"
          @keyup.enter="send"
-         class="flex-1 px-4 py-2 rounded-full bg-white/10 backdrop-blur outline-none focus:ring-2 focus:ring-purple-500">
+         class="flex-1 px-3 py-2 rounded bg-white/10 outline-none">
 
-   <button v-if="text" @click="send"
-    class="bg-gradient-to-r from-purple-600 to-indigo-500 px-4 rounded-full shadow-md active:scale-95 transition">
-      ➤
-    </button>
+  <button @click="send"
+    class="bg-purple-600 px-4 rounded">➤</button>
 
-</div>
-
-<!-- EMOJI -->
-<div v-if="showEmoji" class="p-3 flex flex-wrap gap-2 bg-black/60">
-  <span v-for="e in emojis" @click="addEmoji(e)">
-    {{e}}
-  </span>
 </div>
 
 </div>
 
 <script>
-const API = "https://worker-chat.jihadwajib68.workers.dev"
+const WS = "wss://worker-chat.jihadwajib68.workers.dev/ws"
 
 Vue.createApp({
 
 data(){
 return{
-  defaultAvatar: "https://ui-avatars.com/api/?name=User&background=7c3aed&color=fff",
+defaultAvatar:"https://ui-avatars.com/api/?name=User",
 user:{},
 chat:{},
-touchStartY: 0,
 messages:[],
-readMap:{},
-deliveredMap:{},
 text:'',
-previewImage:null,
 ws:null,
 room:'',
-showProfile:false,
-showEmoji:false,
-emojis:["😀","😂","😍","🔥","👍","🙏","😭","😎"],
 typingUser:'',
 onlineUsers:[],
-lastSeenMap:{}
+wsGlobal:null
 }
 },
 
@@ -303,45 +112,66 @@ async mounted(){
 
 this.user = JSON.parse(localStorage.getItem("user") || "{}")
 this.chat = JSON.parse(localStorage.getItem("activeChat") || "{}")
-await this.loadUserProfile()
-if(!this.chat.avatar){
-  this.chat.avatar = this.defaultAvatar
-}
-
-this.syncMessages()
-setInterval(()=>this.syncMessages(),2000)
 
 if(!this.chat.email){
   alert("Chat tidak valid")
   return
 }
 
-if(!this.chat.avatar){
-  this.chat.avatar = this.defaultAvatar
-}
-
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
-await this.syncMessages(true)
+// ================= WS ROOM =================
+this.ws = new WebSocket(`${WS}?room=${this.room}`)
 
-this.ws = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=" + this.room
-)
+this.ws.onopen = () => {
 
-// ONLINE PING
-setInterval(()=>{
-  if(this.ws.readyState===1){
-    this.ws.send(JSON.stringify({
-      type:"online",
-      user:this.user.email
-    }))
+  // 🔥 INIT HISTORY
+  this.ws.send(JSON.stringify({
+    type:"init_messages",
+    room:this.room
+  }))
+
+  // 🔥 ONLINE
+  this.ws.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
+}
+
+this.ws.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  // 🔥 INIT HISTORY
+  if(msg.type==="init_messages"){
+    this.messages = msg.messages || []
+    this.scrollBottom(true)
+    return
   }
-},1500)
 
-// 🔥 GLOBAL WS (UNTUK ONLINE)
-this.wsGlobal = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
-)
+  // 🔥 MESSAGE
+  if(msg.type==="message"){
+    this.messages.push(msg)
+    this.text=''
+    this.scrollBottom()
+    return
+  }
+
+  // 🔥 TYPING
+  if(msg.type==="typing"){
+    if(msg.sender===this.user.email) return
+
+    this.typingUser = msg.sender
+
+    clearTimeout(this.typingTimeout)
+    this.typingTimeout = setTimeout(()=>{
+      this.typingUser=''
+    },1000)
+  }
+
+}
+
+// ================= GLOBAL =================
+this.wsGlobal = new WebSocket(`${WS}?room=global`)
 
 this.wsGlobal.onopen = ()=>{
   this.wsGlobal.send(JSON.stringify({
@@ -350,123 +180,28 @@ this.wsGlobal.onopen = ()=>{
   }))
 }
 
-// 🔥 LISTENER ONLINE
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  if(msg.type === "online_list"){
+  if(msg.type==="online_list"){
     this.onlineUsers = msg.users || []
   }
 }
 
-// WS LISTENER
-this.ws.onmessage = (e)=>{
-  const msg = JSON.parse(e.data)
-
-  if(msg.type==="message"){
-
-  const last = this.messages[this.messages.length - 1]
-
-  // 🔥 anti duplicate
-  if(!last || (last.text !== msg.text || last.file !== msg.file)){
-    this.messages.push(msg)
-    this.text = ''
-    this.scrollBottom()
-  }
-}
-  // DELIVERED
-if(msg.type==="delivered"){
-  this.deliveredMap[msg.sender] = true
-}
-
-// READ
-if(msg.type==="read"){
-  this.readMap[msg.user] = true
-}
-
-  if(msg.type === "typing"){
-    if(msg.sender === this.user.email) return
-    // 🔥 FILTER ROOM
-    if(msg.room !== this.room) return
-    this.typingUser = msg.name
-    clearTimeout(this.typingTimeout)
-    this.typingTimeout = setTimeout(()=>{
-      this.typingUser = ''
-    },1500)
-  }
-  
-}
-
-}, // ✅ PENTING
+},
 
 methods:{
-markAsRead(){
-  fetch(API+"/mark-read",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      room:this.room,
-      user:this.user.email
-    })
-  })
 
-  if(this.ws && this.ws.readyState===1){
-    this.ws.send(JSON.stringify({
-      type:"read",
-      room:this.room,
-      user:this.user.email
-    }))
-  }
-},
-formatTime(t){
-  if(!t) return ''
+send(){
+  if(!this.text) return
 
-  const d = new Date(t)
-
-  const h = d.getHours().toString().padStart(2,'0')
-  const m = d.getMinutes().toString().padStart(2,'0')
-
-  return h + ':' + m
-},
-
-handleSwipe(e){
-  const currentY = e.touches[0].clientY
-
-  if(currentY - this.touchStartY > 100){
-    this.showProfile = false
-  }
-},
-
-toggleEmoji(){
-  this.showEmoji=!this.showEmoji
-},
-async loadUserProfile(){
-  const res = await fetch(API + "/chats?email=" + this.user.email)
-  const data = await res.json()
-
-  const found = data.find(c => c.friend_email === this.chat.email)
-
-  if(found){
-    this.chat.avatar = found.friend_avatar
-    this.chat.name = found.friend_name
-    this.chat.bio = found.friend_bio
-  }
-},
-
-async syncMessages(){
-  const res = await fetch(API+"/messages?room="+this.room)
-  this.messages = await res.json()
-
-  this.scrollBottom(true) // 🔥 WAJIB
-},
-
-addEmoji(e){
-  this.text+=e
-},
-
-openImage(src){
-  this.previewImage=src
-  this.showProfile=false
+  this.ws.send(JSON.stringify({
+    type:"message",
+    room:this.room,
+    sender:this.user.email,
+    text:this.text,
+    created_at:new Date().toISOString()
+  }))
 },
 
 sendTyping(){
@@ -474,76 +209,28 @@ sendTyping(){
     this.ws.send(JSON.stringify({
       type:"typing",
       room:this.room,
-      sender:this.user.email,
-      name:this.user.name
+      sender:this.user.email
     }))
   }
 },
 
-sendFile(e){
-  const file=e.target.files[0]
-  if(!file) return
-
-  const reader=new FileReader()
-
-  reader.onload=()=>{
-    const payload={
-      type:"message",
-      room:this.room,
-      sender:this.user.email,
-      file:reader.result,
-      file_type:file.type,
-      created_at: new Date().toISOString()
-    }
-
-    this.ws.send(JSON.stringify(payload))
-    this.messages.push(payload)
-  }
-
-  reader.readAsDataURL(file)
-},
-
-send(){
-  if(!this.text) return
-
-  const msg={
-    type:"message",
-    room:this.room,
-    sender:this.user.email,
-    text:this.text,
-    created_at: new Date().toISOString()
-  }
-
-  this.ws.send(JSON.stringify(msg))
-  this.messages.push(msg)
-  this.text = ''
-  this.scrollBottom()
-},
-
-formatLastSeen(t){
-  if(!t) return 'offline'
-
-  const d=(Date.now()-new Date(t))/1000
-
-  if(d<60) return 'just now'
-  if(d<3600) return Math.floor(d/60)+' min ago'
-  if(d<86400) return Math.floor(d/3600)+' hour ago'
-
-  return new Date(t).toLocaleDateString()
+formatTime(t){
+  if(!t) return ''
+  const d = new Date(t)
+  return d.getHours().toString().padStart(2,'0') + ':' +
+         d.getMinutes().toString().padStart(2,'0')
 },
 
 scrollBottom(force=false){
   this.$nextTick(()=>{
     const el = this.$refs.chatBox
+    if(!el) return
 
-    const isNearBottom =
+    const nearBottom =
       el.scrollHeight - el.scrollTop - el.clientHeight < 100
 
-    if(isNearBottom || force){
-      el.scrollTo({
-        top: el.scrollHeight,
-        behavior:"smooth"
-      })
+    if(nearBottom || force){
+      el.scrollTop = el.scrollHeight
     }
   })
 }

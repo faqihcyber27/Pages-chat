@@ -216,6 +216,10 @@ async mounted(){
 
 this.loadContacts()
 
+setInterval(()=>{
+  this.loadContacts()
+},2000)
+
 // 🔥 GLOBAL ONLINE (SAMA DENGAN CHAT)
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
@@ -250,7 +254,22 @@ this.ws.onmessage = (e)=>{
 methods:{
 
 async loadContacts(){
-  this.contacts = await (await fetch(API+"/contacts?email="+this.user.email)).json()
+  const newContacts = await (await fetch(API+"/contacts?email="+this.user.email)).json()
+
+  const map = new Map()
+
+  this.contacts.forEach(c=>{
+    map.set(c.email, c)
+  })
+
+  newContacts.forEach(c=>{
+    map.set(c.email,{
+      ...map.get(c.email),
+      ...c
+    })
+  })
+
+  this.contacts = Array.from(map.values())
 },
 
 async sendRequest(){

@@ -48,29 +48,58 @@ body {background:#020617;color:white;}
        class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
 
     <!-- LEFT -->
-    <div>
+    <div class="flex items-center gap-3">
 
-      <p class="font-semibold flex items-center gap-2">
-        {{c.friend_name}}
+      <!-- AVATAR -->
+      <div>
+        <img v-if="c.friend_avatar"
+          :src="c.friend_avatar"
+          class="w-10 h-10 rounded-full object-cover">
 
-        <!-- ONLINE -->
-        <span v-if="isOnline(getFriendEmail(c))"
-          class="w-2 h-2 bg-green-400 rounded-full"></span>
-      </p>
+        <div v-else
+          :style="{ background: getColor(getName(c)) }"
+          class="w-10 h-10 rounded-full flex items-center justify-center text-white font-semibold">
+          {{ getInitial(getName(c)) }}
+        </div>
+      </div>
 
-      <!-- MESSAGE / TYPING -->
-      <p class="text-sm mt-1"
-         :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-60'">
+      <!-- INFO -->
+      <div>
 
-        <span v-if="typingUsers[getFriendEmail(c)]">
-          sedang mengetik...
-        </span>
+        <!-- NAME + ONLINE -->
+        <p class="font-semibold flex items-center gap-2">
+          {{ getName(c) }}
 
-        <span v-else>
-          {{c.last_message || 'No message'}}
-        </span>
+          <!-- ONLINE -->
+          <span v-if="isOnline(getFriendEmail(c))"
+            class="w-2 h-2 bg-green-400 rounded-full"></span>
+        </p>
 
-      </p>
+        <!-- STATUS -->
+        <p class="text-xs opacity-50">
+          <span v-if="!isOnline(getFriendEmail(c))">
+            🕒 {{ formatLastSeen(c.friend_last_seen) }}
+          </span>
+          <span v-else class="text-green-400">
+            online
+          </span>
+        </p>
+
+        <!-- MESSAGE -->
+        <p class="text-sm mt-1"
+          :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-60'">
+
+          <span v-if="typingUsers[getFriendEmail(c)]">
+            sedang mengetik...
+          </span>
+
+          <span v-else>
+            {{c.last_message || 'No message'}}
+          </span>
+
+        </p>
+
+      </div>
 
     </div>
 
@@ -125,7 +154,6 @@ typingUsers:{},
 wsGlobal:null,
 wsRooms:{},
 
-// ⭐ FAVORITE
 favorites: JSON.parse(localStorage.getItem("favorites") || "[]")
 }
 },
@@ -134,11 +162,10 @@ computed:{
 filteredChats(){
 
   const filtered = this.chats.filter(c=>{
-    const name = (c.friend_name || '').toLowerCase()
+    const name = this.getName(c).toLowerCase()
     return name.includes(this.search.toLowerCase())
   })
 
-  // ⭐ PINNED KE ATAS
   return filtered.sort((a,b)=>{
     const aFav = this.isFav(a.friend_email) ? 1 : 0
     const bFav = this.isFav(b.friend_email) ? 1 : 0
@@ -153,7 +180,7 @@ await this.loadChats()
 
 setInterval(()=>this.loadChats(),3000)
 
-// GLOBAL WS
+// GLOBAL WS (ONLINE)
 this.wsGlobal = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -188,7 +215,23 @@ this.initRoomSockets()
 
 methods:{
 
-// ⭐ TOGGLE FAVORITE
+getName(c){
+  return c.friend_name || c.friend_email
+},
+
+getInitial(name){
+  return name?.charAt(0).toUpperCase()
+},
+
+getColor(name){
+  const colors = ["#7c3aed","#4f46e5","#059669","#dc2626","#ea580c","#0891b2"]
+  let hash=0
+  for(let i=0;i<name.length;i++){
+    hash=name.charCodeAt(i)+((hash<<5)-hash)
+  }
+  return colors[Math.abs(hash)%colors.length]
+},
+
 toggleFav(c){
   const i = this.favorites.findIndex(f => f.email === c.friend_email)
 
@@ -208,6 +251,17 @@ isFav(email){
   return this.favorites.find(f => f.email === email)
 },
 
+formatLastSeen(t){
+  if(!t) return 'offline'
+  const d=(Date.now()-new Date(t))/1000
+
+  if(d<60) return 'just now'
+  if(d<3600) return Math.floor(d/60)+' min ago'
+  if(d<86400) return Math.floor(d/3600)+' hour ago'
+
+  return new Date(t).toLocaleDateString()
+},
+
 initRoomSockets(){
   this.chats.forEach(c=>{
     const room = [this.user.email, c.friend_email].sort().join("_")
@@ -221,18 +275,12 @@ initRoomSockets(){
     ws.onmessage = (e)=>{
       const msg = JSON.parse(e.data)
 
-      // typing
       if(msg.type==="typing"){
         if(msg.sender === this.user.email) return
-
         this.typingUsers[msg.sender] = true
-
-        setTimeout(()=>{
-          delete this.typingUsers[msg.sender]
-        },1500)
+        setTimeout(()=>delete this.typingUsers[msg.sender],1500)
       }
 
-      // new message
       if(msg.type==="message"){
         this.loadChats()
       }
@@ -251,7 +299,6 @@ async loadChats(){
 },
 
 openChat(c){
-
   const room = [this.user.email, c.friend_email].sort().join("_")
 
   fetch(API+"/mark-read",{
@@ -267,7 +314,8 @@ openChat(c){
     email:c.friend_email,
     name:c.friend_name,
     avatar:c.friend_avatar,
-    bio:c.friend_bio
+    bio:c.friend_bio,
+    last_seen:c.friend_last_seen
   }))
 
   parent.location.href="chat.html"

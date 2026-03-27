@@ -54,6 +54,8 @@ class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
 <!-- CONTACT LIST -->
 <div v-for="c in filteredContacts"
      @click="startChat(c)"
+     @touchstart="startPress(c)"
+     @touchend="cancelPress"
      class="contact-card p-3 mb-3 rounded-2xl flex items-center justify-between cursor-pointer">
 
   <div class="flex items-center gap-3">
@@ -158,6 +160,23 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
     </div>
 
   </div>
+  <div v-if="selectedContact"
+    class="fixed inset-0 bg-black/60 flex items-center justify-center">
+
+    <div class="glass p-5 rounded-xl w-72 text-center">
+
+      <p class="mb-4">Delete {{selectedContact.name}}?</p>
+
+    <div class="flex gap-2">
+      <button @click="deleteContact"
+        class="bg-red-500 flex-1 p-2 rounded">Delete</button>
+
+      <button @click="selectedProfile=null"
+        class="bg-gray-600 flex-1 p-2 rounded">Cancel</button>
+    </div>
+
+  </div>
+</div>
 
 </div>
 
@@ -197,7 +216,7 @@ async mounted(){
 
 this.loadContacts()
 
-// 🔥 GLOBAL ONLINE
+// 🔥 GLOBAL ONLINE (SAMA DENGAN CHAT)
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -248,7 +267,7 @@ async sendRequest(){
   alert("Request sent")
 },
 
-// 🔥 FIX UTAMA (KELUAR DARI IFRAME)
+// 🔥 FIX UTAMA (SINKRON CHAT.HTML)
 startChat(c){
 
   localStorage.setItem("activeChat", JSON.stringify({
@@ -259,11 +278,36 @@ startChat(c){
     last_seen: c.last_seen || null
   }))
 
-  window.top.location.href = "chat.html"
+  setTimeout(()=>{
+    window.top.location.href = "chat.html"
+  },100)
+},
+
+async deleteContact(){
+  await fetch(API+"/delete-contact",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+    user_email:this.user.email,
+    friend_email:this.selectedContact.email
+    })
+  })
+  this.selectedContact=null
+  this.loadContacts()
 },
 
 viewProfile(c){
   this.selectedProfile = c
+},
+
+startPress(c){
+  this.pressTimer=setTimeout(()=>{
+  this.selectedContact=c
+  },600)
+},
+
+cancelPress(){
+  clearTimeout(this.pressTimer)
 },
 
 isOnline(email){

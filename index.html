@@ -144,13 +144,14 @@ if(!this.email || !this.password || (!this.isLogin && !this.name)){
 this.loading = true
 
 try{
-const res=await fetch(API+(this.isLogin?"/login":"/register"),{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-  name:this.name,
-  email:this.email,
-  password:this.password
+const res = await fetch(API + (this.isLogin ? "/login" : "/register"), {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    name: this.name,
+    email: this.email,
+    password: this.password
+  })
 })
 
 const d=await res.json()

@@ -42,12 +42,7 @@ body {background:#020617;color:white;}
 
     <p>{{getName(c)}}</p>
 
-    <!-- 🔥 UNPIN -->
-    <button @click.stop="togglePin(c)"
-      class="text-yellow-400">
-      ⭐
-    </button>
-
+    <button @click.stop="togglePin(c)" class="text-yellow-400">⭐</button>
   </div>
 </div>
 
@@ -58,6 +53,7 @@ body {background:#020617;color:white;}
        @click="openChat(c)"
        class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
 
+    <!-- LEFT -->
     <div class="flex items-center gap-3">
 
       <img v-if="c.friend_avatar"
@@ -72,6 +68,7 @@ body {background:#020617;color:white;}
 
       <div>
 
+        <!-- NAME + ONLINE -->
         <p class="font-semibold flex items-center gap-2">
           {{ getName(c) }}
 
@@ -79,29 +76,55 @@ body {background:#020617;color:white;}
             class="w-2 h-2 bg-green-400 rounded-full"></span>
         </p>
 
+        <!-- MESSAGE PREVIEW (🔥 dari home) -->
         <p class="text-sm"
           :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-60'">
 
+          <!-- typing -->
           <span v-if="typingUsers[c.friend_email]">
             sedang mengetik...
           </span>
 
-          <span v-else>
-            {{c.last_message}}
+          <!-- image -->
+          <span v-else-if="
+            (c.last_file_type && c.last_file_type.includes('image')) ||
+            c.last_message === '📷 Foto'
+          ">
+            📷 Foto
           </span>
+
+          <!-- file -->
+          <span v-else-if="
+            c.last_file_type ||
+            c.last_message === '📎 File'
+          ">
+            📎 File
+          </span>
+
+          <!-- text -->
+          <span v-else-if="c.last_message">
+            {{c.last_message}}
+            <span class="ml-1 text-xs">
+              <span v-if="c.unread==0">✓✓</span>
+              <span v-else>✓</span>
+            </span>
+          </span>
+
+          <!-- default -->
+          <span v-else>No message</span>
 
         </p>
 
       </div>
     </div>
 
+    <!-- RIGHT -->
     <div class="text-right">
 
       <p class="text-xs opacity-50">
         {{formatTime(c.updated_at)}}
       </p>
 
-      <!-- ⭐ PIN -->
       <button @click.stop="togglePin(c)"
         :class="isPinned(c.friend_email)?'text-yellow-400':'opacity-40'">
         ⭐
@@ -130,41 +153,70 @@ return{
 user: JSON.parse(localStorage.getItem("user")),
 chats:[],
 search:'',
+
 onlineUsers:[],
 typingUsers:{},
+
 wsRooms:{},
+wsGlobal:null,
+
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
 }
 },
 
 computed:{
-
 pinnedChats(){
   return this.chats.filter(c=>this.pinned.includes(c.friend_email))
 },
-
 normalChats(){
   return this.chats.filter(c=>!this.pinned.includes(c.friend_email))
+}
+},
+
+mounted(){
+
+this.loadChats()
+
+// 🔥 GLOBAL ONLINE (AMBIL DARI HOME)
+this.wsGlobal = new WebSocket(
+  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
+)
+
+this.wsGlobal.onopen = ()=>{
+  this.wsGlobal.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
+
+  setInterval(()=>{
+    if(this.wsGlobal.readyState===1){
+      this.wsGlobal.send(JSON.stringify({
+        type:"online",
+        user:this.user.email
+      }))
+    }
+  },5000)
+}
+
+this.wsGlobal.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  if(msg.type==="online_list"){
+    this.onlineUsers = msg.users || []
+  }
 }
 
 },
 
-mounted(){
-this.loadChats()
-},
-
 methods:{
 
-// ✅ FIX PIN
 togglePin(c){
   const i = this.pinned.indexOf(c.friend_email)
-
   if(i>-1){
     this.pinned.splice(i,1)
   }else{
     this.pinned.push(c.friend_email)
   }
-
   localStorage.setItem("pinned", JSON.stringify(this.pinned))
 },
 
@@ -172,13 +224,11 @@ isPinned(email){
   return this.pinned.includes(email)
 },
 
-// ✅ FIX REALTIME SOCKET
 initRoomSockets(){
 
 this.chats.forEach(c=>{
 
 const room = [this.user.email,c.friend_email].sort().join("_")
-
 if(this.wsRooms[room]) return
 
 const ws = new WebSocket(
@@ -188,19 +238,26 @@ const ws = new WebSocket(
 ws.onmessage = (e)=>{
 const msg = JSON.parse(e.data)
 
-// 🔥 typing
+// ✅ TYPING FIX (FILTER ROOM)
 if(msg.type==="typing"){
   if(msg.sender===this.user.email) return
+  if(msg.room !== room) return
+
   this.typingUsers[msg.sender]=true
-  setTimeout(()=>delete this.typingUsers[msg.sender],800)
+  setTimeout(()=>delete this.typingUsers[msg.sender],1000)
 }
 
-// 🔥 FIX MESSAGE REALTIME
+// ✅ MESSAGE REALTIME
 if(msg.type==="message"){
 
-  const friend = msg.sender===this.user.email
-    ? msg.room.replace(this.user.email+"_","").replace("_"+this.user.email,"")
-    : msg.sender
+  let friend
+
+  if(msg.sender === this.user.email){
+    const parts = msg.room.split("_")
+    friend = parts.find(x=>x!==this.user.email)
+  }else{
+    friend = msg.sender
+  }
 
   const chat = this.chats.find(x=>x.friend_email===friend)
 
@@ -212,14 +269,11 @@ if(msg.type==="message"){
       chat.unread = (chat.unread||0)+1
     }
 
-    // move top
-    this.chats = this.chats.filter(x=>x!==chat)
+    this.chats = this.chats.filter(x=>x.friend_email!==friend)
     this.chats.unshift(chat)
   }
-
 }
 
-// 🔥 READ SYNC
 if(msg.type==="read"){
   const chat = this.chats.find(x=>x.friend_email===msg.user)
   if(chat) chat.unread=0
@@ -257,7 +311,6 @@ user:this.user.email
 
 c.unread=0
 
-// ✅ FIX SAFE DATA
 localStorage.setItem("activeChat", JSON.stringify({
   email:c.friend_email,
   name:c.friend_name,

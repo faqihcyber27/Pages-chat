@@ -342,7 +342,8 @@ showToastMsg(msg){
 },
 
 async sendRequest(){
-  await fetch("https://worker-chat.jihadwajib68.workers.dev/send-request",{
+
+  const res = await fetch("https://worker-chat.jihadwajib68.workers.dev/send-request",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({
@@ -350,9 +351,18 @@ async sendRequest(){
       to_email:this.friendEmail
     })
   })
+
+  const result = await res.json()
+
+  if(result.error){
+    this.showToastMsg(result.error)
+    return
+  }
+
   this.showModal=false
-  this.showToastMsg("Request sent ✅")
-},
+  this.friendEmail=''
+  this.showToastMsg("Friend added ✅")
+}
 
 startChat(c){
   localStorage.setItem("activeChat", JSON.stringify({

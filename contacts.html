@@ -90,6 +90,8 @@ class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
     <button @click.stop="startChat(c)" class="action-btn">💬</button>
 
     <button @click.stop="viewProfile(c)" class="action-btn">👁</button>
+    
+    <button @click.stop="deleteContact(c)" class="action-btn"></button>
 
   </div>
 
@@ -160,7 +162,9 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
     </div>
 
   </div>
-  <div v-if="selectedContact"
+
+</div>
+<div v-if="selectedContact"
     class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
     <div class="glass p-5 rounded-xl w-72 text-center">
@@ -176,8 +180,6 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
     </div>
 
   </div>
-</div>
-
 </div>
 
 </div>

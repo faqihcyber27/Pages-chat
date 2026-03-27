@@ -104,12 +104,10 @@ Loading...
 </p>
 
 </div>
-
-</div>
-
 <!-- TOAST -->
 <div :class="['toast', showToast ? 'show' : '']">
   {{toastMsg}}
+</div>
 </div>
 
 <script>
@@ -138,7 +136,7 @@ toast(msg){
 
 async submit(){
 
-if(!this.email || !this.password){
+if(!this.email || !this.password || (!this.isLogin && !this.name)){
   this.toast("Isi semua field dulu ⚠️")
   return
 }
@@ -149,7 +147,10 @@ try{
 const res=await fetch(API+(this.isLogin?"/login":"/register"),{
 method:"POST",
 headers:{"Content-Type":"application/json"},
-body:JSON.stringify(this)
+body:JSON.stringify({
+  name:this.name,
+  email:this.email,
+  password:this.password
 })
 
 const d=await res.json()

@@ -177,7 +177,7 @@ body {
 </div>
 
 <script>
-const API="https://worker-chat.jihadwajib68.workers.dev"
+const WS_URL="wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 
 if(!localStorage.getItem("user")){
   parent.location.href="index.html"
@@ -189,8 +189,38 @@ return{
 user: JSON.parse(localStorage.getItem("user")),
 showToast:false,
 toastMessage:"",
+ws:null,
 loading:false
 }
+},
+
+mounted(){
+
+  // 🔥 CONNECT WS
+  this.ws = new WebSocket(WS_URL)
+
+  this.ws.onopen = ()=>{
+    this.ws.send(JSON.stringify({
+      type:"online",
+      user:this.user.email
+    }))
+  }
+
+  // 🔥 LISTENER REALTIME
+  this.ws.onmessage = (e)=>{
+    const msg = JSON.parse(e.data)
+
+    if(msg.type==="profile_update"){
+      if(msg.user.email === this.user.email){
+
+        this.user = msg.user
+        localStorage.setItem("user", JSON.stringify(this.user))
+
+        this.showToastMsg("Profile updated realtime 🚀")
+      }
+    }
+  }
+
 },
 
 methods:{
@@ -221,16 +251,20 @@ async saveProfile(){
 
   this.loading = true
 
-  await fetch(API+"/update-profile",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify(this.user)
-  })
+  // 🔥 SEND VIA WEBSOCKET (BUKAN FETCH)
+  if(this.ws && this.ws.readyState === 1){
+    this.ws.send(JSON.stringify({
+      type:"profile_update",
+      email:this.user.email,
+      name:this.user.name,
+      bio:this.user.bio,
+      avatar:this.user.avatar
+    }))
+  }
 
   localStorage.setItem("user", JSON.stringify(this.user))
 
   this.loading = false
-  this.showToastMsg("Profile saved successfully ✅")
 },
 
 logout(){

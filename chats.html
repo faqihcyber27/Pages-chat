@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<script src="https://unpkg.com/vue@3"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
@@ -199,14 +199,30 @@ this.wsGlobal.onopen = ()=>{
   }))
 }
 
+this.wsGlobal.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  console.log("WS:", msg) // 🔥 WAJIB
+
+  if(msg.type === "init_chats"){
+    console.log("CHATS:", msg.chats)
+    this.chats = msg.chats || []
+    this.initRoomSockets()
+    return
+  }
+}
+
 // 🔥 LISTENER
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
   // INIT CHATS
   if(msg.type === "init_chats"){
-    this.chats = msg.chats || []
-    this.initRoomSockets()
+    console.log("INIT CHATS:", msg.chats)
+    this.chats = [...(msg.chats || [])]
+    this.$nextTick(()=>{
+      this.initRoomSockets()
+    })
     return
   }
 

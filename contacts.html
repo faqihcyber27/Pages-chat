@@ -91,7 +91,7 @@ class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
 
     <button @click.stop="viewProfile(c)" class="action-btn">👁</button>
     
-    <button @click.stop="deleteContact(c)" class="action-btn">🗑</button>
+    <button @click.stop="startPress(c)" class="action-btn">🗑</button>
 
   </div>
 
@@ -303,9 +303,7 @@ viewProfile(c){
 },
 
 startPress(c){
-  this.pressTimer=setTimeout(()=>{
   this.selectedContact=c
-  },600)
 },
 
 cancelPress(){

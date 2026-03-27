@@ -1,4 +1,185 @@
-<!-- HANYA SCRIPT YANG BERUBAH -->
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://unpkg.com/vue@3"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+
+<style>
+body {background:#020617;color:white;}
+
+.chat-card {
+  background: rgba(255,255,255,0.05);
+  backdrop-filter: blur(18px);
+  border: 1px solid rgba(255,255,255,0.08);
+  transition: 0.3s;
+}
+.chat-card:hover {transform: scale(1.02);}
+</style>
+</head>
+
+<body>
+
+<div id="app" class="h-full flex flex-col">
+
+<div class="px-4 mt-4 text-xl font-semibold">Chats</div>
+
+<div class="px-4 mt-3">
+  <input v-model="search"
+    placeholder="Search..."
+    class="w-full p-3 rounded-xl bg-white/10 border border-white/10">
+</div>
+
+<!-- 📌 PINNED -->
+<div v-if="pinnedChats.length" class="px-4 mt-4">
+  <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
+
+  <div v-for="c in pinnedChats"
+     @click="handleClick(c)"
+     @touchstart="startPress(c, $event)"
+     @touchend="endPress"
+     @touchmove="cancelPress"
+     class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer border border-yellow-400/20">
+
+    <div class="flex items-center gap-3">
+      <img v-if="c.friend_avatar"
+        :src="c.friend_avatar"
+        class="w-10 h-10 rounded-full object-cover">
+
+      <div v-else
+        :style="{ background: getColor(getName(c)) }"
+        class="w-10 h-10 rounded-full flex items-center justify-center">
+        {{ getInitial(getName(c)) }}
+      </div>
+
+      <div>
+        <p class="font-semibold flex items-center gap-2">
+          {{ getName(c) }}
+          <span v-if="isOnline(c.friend_email)"
+            class="w-2 h-2 bg-green-400 rounded-full"></span>
+          <span class="text-yellow-400 text-xs">📌</span>
+        </p>
+
+        <p class="text-sm opacity-60">
+          <span v-if="typingUsers[c.friend_email]" class="text-green-400">
+            sedang mengetik...
+          </span>
+          <span v-else-if="c.last_message">
+            {{c.last_message}}
+          </span>
+          <span v-else>No message</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="text-right">
+      <p class="text-xs opacity-50">
+        {{formatTime(c.updated_at)}}
+      </p>
+
+      <button @click.stop="togglePin(c)"
+        class="text-yellow-400">⭐</button>
+
+      <div v-if="c.unread>0"
+        class="bg-red-500 text-xs px-2 rounded-full mt-1">
+        {{c.unread}}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- LIST -->
+<div class="flex-1 overflow-auto px-4 mt-4">
+
+  <div v-for="c in normalChats"
+       @click="openChat(c)"
+       @touchstart="startChatPress(c)"
+       @touchend="cancelPress"
+       class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
+
+    <div class="flex items-center gap-3">
+
+      <img v-if="c.friend_avatar"
+        :src="c.friend_avatar"
+        class="w-10 h-10 rounded-full object-cover">
+
+      <div v-else
+        :style="{ background: getColor(getName(c)) }"
+        class="w-10 h-10 rounded-full flex items-center justify-center">
+        {{ getInitial(getName(c)) }}
+      </div>
+
+      <div>
+        <p class="font-semibold flex items-center gap-2">
+          {{ getName(c) }}
+          <span v-if="isOnline(c.friend_email)"
+            class="w-2 h-2 bg-green-400 rounded-full"></span>
+        </p>
+
+        <p class="text-sm"
+          :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-60'">
+
+          <span v-if="typingUsers[c.friend_email]">
+            sedang mengetik...
+          </span>
+
+          <span v-else-if="c.last_message">
+            {{c.last_message}}
+          </span>
+
+          <span v-else>No message</span>
+
+        </p>
+      </div>
+    </div>
+
+    <div class="text-right">
+      <p class="text-xs opacity-50">
+        {{formatTime(c.updated_at)}}
+      </p>
+
+      <button @click.stop="togglePin(c)"
+        :class="isPinned(c.friend_email)?'text-yellow-400':'opacity-40'">
+        ⭐
+      </button>
+
+      <div v-if="c.unread>0"
+        class="bg-red-500 text-xs px-2 rounded-full mt-1">
+        {{c.unread}}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- DELETE -->
+  <div v-if="selectedChat"
+    class="fixed inset-0 bg-black/60 flex items-center justify-center">
+
+    <div class="p-5 bg-gray-900 rounded-xl w-72 text-center">
+
+      <p class="mb-4">
+        Delete chat with {{selectedChat.friend_name}}?
+      </p>
+
+      <div class="flex gap-2">
+        <button @click="deleteChat"
+          class="bg-red-500 flex-1 p-2 rounded">Delete</button>
+
+        <button @click="selectedChat=null"
+          class="bg-gray-600 flex-1 p-2 rounded">Cancel</button>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+</div>
+
 <script>
 const API="https://worker-chat.jihadwajib68.workers.dev"
 
@@ -9,13 +190,11 @@ return{
 user: JSON.parse(localStorage.getItem("user")),
 chats:[],
 search:'',
-
 onlineUsers:[],
 typingUsers:{},
 selectedChat:null,
 wsRooms:{},
 wsGlobal:null,
-
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
 }
 },
@@ -29,7 +208,7 @@ normalChats(){
 }
 },
 
-// ✅ FIX: pindah watcher ke sini
+// ✅ FIX PENTING (INI PENYEBAB KOSONG)
 watch:{
   chats(){
     this.$nextTick(()=>{
@@ -40,10 +219,10 @@ watch:{
 
 mounted(){
 
-// 🔥 LOAD AWAL SAJA (TIDAK ADA POLLING)
+// ✅ LOAD SEKALI
 this.loadChats()
 
-// 🔥 GLOBAL ONLINE WS
+// 🔥 GLOBAL WS
 this.wsGlobal = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -53,15 +232,6 @@ this.wsGlobal.onopen = ()=>{
     type:"online",
     user:this.user.email
   }))
-
-  setInterval(()=>{
-    if(this.wsGlobal.readyState===1){
-      this.wsGlobal.send(JSON.stringify({
-        type:"online",
-        user:this.user.email
-      }))
-    }
-  },5000)
 }
 
 this.wsGlobal.onmessage = (e)=>{
@@ -100,17 +270,7 @@ cancelPress(){
   clearTimeout(this.pressTimer)
 },
 
-// 🔥 DELETE TANPA RELOAD
 async deleteChat(){
-
-  const room = [this.user.email,this.selectedChat.friend_email].sort().join("_")
-
-  // tutup WS room
-  if(this.wsRooms[room]){
-    this.wsRooms[room].close()
-    delete this.wsRooms[room]
-  }
-
   await fetch(API+"/delete-chat",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -120,7 +280,6 @@ async deleteChat(){
     })
   })
 
-  // 🔥 update UI langsung
   this.chats = this.chats.filter(c =>
     c.friend_email !== this.selectedChat.friend_email
   )
@@ -128,7 +287,6 @@ async deleteChat(){
   this.selectedChat=null
 },
 
-// 🔥 FULL REALTIME SOCKET
 initRoomSockets(){
 
 this.chats.forEach(c=>{
@@ -144,13 +302,10 @@ const ws = new WebSocket(
 ws.onmessage = (e)=>{
 const msg = JSON.parse(e.data)
 
-// ===== TYPING =====
+// typing
 if(msg.type==="typing"){
   if(msg.sender===this.user.email) return
-  this.typingUsers = {
-    ...this.typingUsers,
-    [msg.sender]: true
-  }
+  this.typingUsers = {...this.typingUsers,[msg.sender]:true}
   setTimeout(()=>{
     const t = {...this.typingUsers}
     delete t[msg.sender]
@@ -158,7 +313,7 @@ if(msg.type==="typing"){
   },1000)
 }
 
-// ===== MESSAGE =====
+// message
 if(!msg.type || msg.type==="message"){
 
   let friend = msg.sender === this.user.email
@@ -168,7 +323,6 @@ if(!msg.type || msg.type==="message"){
   const chat = this.chats.find(x=>x.friend_email===friend)
 
   if(chat){
-
     chat.last_message = msg.text || "📎 File"
     chat.updated_at = msg.created_at
 
@@ -176,7 +330,6 @@ if(!msg.type || msg.type==="message"){
       chat.unread = (chat.unread||0)+1
     }
 
-    // 🔥 reorder realtime
     this.chats = [
       chat,
       ...this.chats.filter(x=>x.friend_email!==friend)
@@ -184,23 +337,11 @@ if(!msg.type || msg.type==="message"){
   }
 }
 
-// ===== READ =====
 if(msg.type==="read"){
   const chat = this.chats.find(x=>x.friend_email===msg.user)
   if(chat) chat.unread=0
 }
 
-// ===== DELETE SYNC (WAJIB TAMBAH DI WORKER NANTI) =====
-if(msg.type==="chat_deleted"){
-  this.chats = this.chats.filter(x =>
-    x.friend_email !== msg.friend
-  )
-}
-
-}
-
-ws.onclose = ()=>{
-  delete this.wsRooms[room]
 }
 
 this.wsRooms[room]=ws
@@ -267,3 +408,6 @@ d.getMinutes().toString().padStart(2,'0')
 
 }).mount("#app")
 </script>
+
+</body>
+</html>

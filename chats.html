@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <script src="https://unpkg.com/vue@3"></script>
 <script src="https://cdn.tailwindcss.com"></script>
+
 </head>
 
 <body class="bg-[#020617] text-white">
@@ -13,26 +15,33 @@
 
 <h1 class="text-xl mb-3">Chats</h1>
 
-<input v-model="search" placeholder="Search..."
+<input v-model="search"
+placeholder="Search..."
 class="w-full mb-4 p-2 rounded bg-white/10">
 
 <div v-for="c in filteredChats"
 @click="openChat(c)"
-class="p-3 mb-2 bg-white/10 rounded">
+class="p-3 mb-2 bg-white/10 rounded cursor-pointer">
 
-<p class="font-semibold">
+<p class="font-semibold flex items-center gap-2">
   {{c.friend_name}}
-  <span v-if="isOnline(getFriendEmail(c))" class="text-green-400">●</span>
+
+  <!-- ONLINE -->
+  <span v-if="isOnline(getFriendEmail(c))"
+    class="text-green-400 text-xs">●</span>
 </p>
 
 <p class="text-sm"
-:class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : ''">
+:class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-70'">
 
+<!-- TYPING -->
 <span v-if="typingUsers[getFriendEmail(c)]">
   typing...
 </span>
+
+<!-- LAST MESSAGE -->
 <span v-else>
-  {{c.last_message}}
+  {{c.last_message || 'No message'}}
 </span>
 
 </p>
@@ -45,71 +54,160 @@ class="p-3 mb-2 bg-white/10 rounded">
 const API="https://worker-chat.jihadwajib68.workers.dev"
 
 if(!localStorage.getItem("user")){
-  parent.location.href="index.html"
+  location.href="index.html"
 }
 
 Vue.createApp({
+
 data(){
 return{
 user: JSON.parse(localStorage.getItem("user")),
 chats:[],
 search:'',
+
 onlineUsers:[],
-typingUsers:{}
+typingUsers:{},
+
+wsGlobal:null,
+wsRooms:{} // 🔥 multiple room listener
 }
 },
 
 computed:{
 filteredChats(){
 return this.chats.filter(c=>{
-const name = c.friend_name.toLowerCase()
+const name = (c.friend_name || '').toLowerCase()
 return name.includes(this.search.toLowerCase())
 })
 }
 },
 
 async mounted(){
-this.loadChats()
-setInterval(()=>this.loadChats(),2000)
 
-// WS GLOBAL
-this.ws = new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
+await this.loadChats()
 
-this.ws.onopen=()=>{
-this.ws.send(JSON.stringify({type:"online",user:this.user.email}))
+// 🔥 polling fallback
+setInterval(()=>this.loadChats(),3000)
+
+// ================= GLOBAL WS =================
+this.wsGlobal = new WebSocket(
+  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
+)
+
+this.wsGlobal.onopen = ()=>{
+  this.wsGlobal.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
+
+  // 🔥 HEARTBEAT
+  this.heartbeat = setInterval(()=>{
+    if(this.wsGlobal.readyState===1){
+      this.wsGlobal.send(JSON.stringify({
+        type:"online",
+        user:this.user.email
+      }))
+    }
+  },5000)
 }
 
-this.ws.onmessage=(e)=>{
-const msg=JSON.parse(e.data)
+this.wsGlobal.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
 
-if(msg.type==="online_list"){
-this.onlineUsers=msg.users||[]
+  if(msg.type==="online_list"){
+    this.onlineUsers = msg.users || []
+  }
 }
 
-if(msg.type==="typing"){
-this.typingUsers[msg.sender]=true
-setTimeout(()=>delete this.typingUsers[msg.sender],2000)
-}
-}
+// ================= ROOM WS (UNTUK TYPING) =================
+this.initRoomSockets()
+
 },
 
 methods:{
+
+// 🔥 INIT ROOM SOCKET UNTUK SEMUA CHAT
+initRoomSockets(){
+
+  this.chats.forEach(c=>{
+
+    const friend = c.friend_email
+    const room = [this.user.email, friend].sort().join("_")
+
+    if(this.wsRooms[room]) return
+
+    const ws = new WebSocket(
+      "wss://worker-chat.jihadwajib68.workers.dev/ws?room="+room
+    )
+
+    ws.onmessage = (e)=>{
+      const msg = JSON.parse(e.data)
+
+      // TYPING
+      if(msg.type==="typing"){
+        if(msg.sender === this.user.email) return
+
+        this.typingUsers[msg.sender] = true
+
+        setTimeout(()=>{
+          delete this.typingUsers[msg.sender]
+        },1500)
+      }
+
+      // MESSAGE (biar realtime naik)
+      if(msg.type==="message"){
+        this.loadChats()
+      }
+    }
+
+    this.wsRooms[room] = ws
+
+  })
+
+},
+
 async loadChats(){
-this.chats = await (await fetch(API+"/chats?email="+this.user.email)).json()
+  this.chats = await (await fetch(API+"/chats?email="+this.user.email)).json()
+
+  // 🔥 re-init socket kalau ada chat baru
+  this.$nextTick(()=>{
+    this.initRoomSockets()
+  })
 },
 
 openChat(c){
-localStorage.setItem("activeChat", JSON.stringify(c))
-location.href="chat.html"
+
+  const room = [this.user.email, c.friend_email].sort().join("_")
+
+  // 🔥 mark read
+  fetch(API+"/mark-read",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      room:room,
+      user:this.user.email
+    })
+  })
+
+  // 🔥 SIMPAN FORMAT BENAR
+  localStorage.setItem("activeChat", JSON.stringify({
+    email:c.friend_email,
+    name:c.friend_name,
+    avatar:c.friend_avatar,
+    bio:c.friend_bio
+  }))
+
+  location.href="chat.html"
 },
 
 getFriendEmail(c){
-return c.friend_email
+  return c.friend_email
 },
 
 isOnline(email){
-return this.onlineUsers.includes(email)
+  return this.onlineUsers.includes(email)
 }
+
 }
 
 }).mount("#app")

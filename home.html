@@ -12,52 +12,43 @@ body {
   color: white;
 }
 
-/* ===== HEADER ===== */
+/* HEADER */
 .header {
   background: linear-gradient(135deg, #7c3aed, #4f46e5);
   border-radius: 0 0 24px 24px;
-
   box-shadow:
     0 10px 40px rgba(124,58,237,0.4),
     inset 0 1px 0 rgba(255,255,255,0.1);
-
   backdrop-filter: blur(20px);
   position: relative;
   z-index: 20;
 }
-
 .header::after {
   content:"";
   position:absolute;
   inset:0;
   background: radial-gradient(circle at right top, rgba(255,255,255,0.2), transparent 60%);
-  pointer-events: none; /* 🔥 FIX CLICK */
+  pointer-events: none;
 }
 
-/* ===== NAVBAR ===== */
+/* NAVBAR */
 .navbar {
   position: fixed;
   bottom: 12px;
   left: 50%;
   transform: translateX(-50%);
-
   width: 92%;
   border-radius: 20px;
-
   background: rgba(255,255,255,0.08);
   backdrop-filter: blur(25px);
-
   border: 1px solid rgba(255,255,255,0.1);
-
   box-shadow:
     0 10px 30px rgba(0,0,0,0.5),
     inset 0 1px 0 rgba(255,255,255,0.05);
-
   padding: 8px;
   z-index: 30;
 }
 
-/* NAV BUTTON */
 .nav-btn {
   flex: 1;
   padding: 10px 0;
@@ -65,11 +56,7 @@ body {
   transition: 0.25s;
   position: relative;
 }
-
-.active {
-  color: #a78bfa;
-}
-
+.active { color: #a78bfa; }
 .active::before {
   content:"";
   position:absolute;
@@ -80,69 +67,44 @@ body {
   z-index:-1;
 }
 
-.nav-btn:active {
-  transform: scale(0.85);
-}
-
-/* FRAME */
 #frame {
   transition: opacity 0.25s ease;
-  position: relative;
-  z-index: 1;
 }
 
-/* ===== MODAL ===== */
-#requestPopup {
-  z-index: 999;
-}
-
+/* MODAL */
 .glass-card {
   background: rgba(255,255,255,0.06);
   backdrop-filter: blur(25px);
   border: 1px solid rgba(255,255,255,0.1);
-  box-shadow:
-    0 20px 50px rgba(0,0,0,0.5),
-    inset 0 1px 0 rgba(255,255,255,0.05);
   border-radius: 20px;
 }
 
-/* ANIMATION */
-@keyframes modalIn {
-  0% {transform: scale(0.8) translateY(30px); opacity: 0;}
-  100% {transform: scale(1) translateY(0); opacity: 1;}
-}
-.animate-modal {
-  animation: modalIn 0.25s ease;
-}
-
-/* REQUEST CARD */
+/* REQUEST */
 .request-card {
   background: rgba(255,255,255,0.05);
   border-radius: 14px;
   padding: 12px;
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  transition: 0.2s;
-}
-.request-card:hover {
-  background: rgba(255,255,255,0.08);
-  transform: scale(1.02);
 }
 
-/* BUTTON */
-.btn {
-  padding: 6px 10px;
-  border-radius: 10px;
-  font-size: 13px;
-  transition: 0.2s;
+/* TOAST */
+#toast {
+  position: fixed;
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(0,0,0,0.8);
+  padding: 10px 16px;
+  border-radius: 12px;
+  opacity: 0;
+  transition: 0.3s;
+  z-index: 999;
 }
-.btn:active {
-  transform: scale(0.9);
+#toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
-.btn-accept { background: #22c55e; }
-.btn-reject { background: #ef4444; }
-
 </style>
 </head>
 
@@ -156,27 +118,22 @@ if(!localStorage.getItem("user")){
 
 <div class="h-screen flex flex-col">
 
-  <!-- HEADER ONLY -->
+  <!-- HEADER -->
   <div class="header p-4 flex justify-between items-center mx-2 mt-2">
 
     <div class="flex items-center gap-3">
-
       <img id="avatar"
-        class="w-11 h-11 rounded-full object-cover border border-white/20 shadow-md">
+        class="w-11 h-11 rounded-full object-cover border border-white/20">
 
       <div>
-        <h1 class="text-base font-semibold" id="username">Loading...</h1>
+        <h1 class="text-base font-semibold" id="username"></h1>
         <p class="text-xs opacity-70">Realtime Chat</p>
       </div>
-
     </div>
 
-    <!-- 🔔 FIX -->
-    <div class="relative z-30">
-      <button onclick="toggleRequests()"
-        class="text-xl hover:scale-110 transition relative z-30">
-        🔔
-      </button>
+    <!-- 🔔 -->
+    <div class="relative">
+      <button onclick="toggleRequests()" class="text-xl">🔔</button>
 
       <span id="notifCount"
         class="hidden absolute -top-2 -right-2 bg-red-500 text-[10px] px-1.5 rounded-full">
@@ -186,63 +143,50 @@ if(!localStorage.getItem("user")){
 
   </div>
 
-  <!-- ONLY FRAME (CONTENT TIDAK DIUBAH) -->
+  <!-- CONTENT -->
   <iframe id="frame" src="chats.html" class="flex-1 w-full border-0"></iframe>
 
-  <!-- NAVBAR ONLY -->
+  <!-- NAVBAR -->
   <div class="navbar flex justify-around text-xl">
-
-    <button onclick="navigate('chats.html', this)"
-      class="nav-btn active">
-      💬
-    </button>
-
-    <button onclick="navigate('contacts.html', this)"
-      class="nav-btn">
-      👤
-    </button>
-
-    <button onclick="navigate('profile.html', this)"
-      class="nav-btn">
-      ⚙️
-    </button>
-
+    <button onclick="navigate('chats.html', this)" class="nav-btn active">💬</button>
+    <button onclick="navigate('contacts.html', this)" class="nav-btn">👤</button>
+    <button onclick="navigate('profile.html', this)" class="nav-btn">⚙️</button>
   </div>
 
 </div>
 
 <!-- REQUEST MODAL -->
 <div id="requestPopup"
-class="hidden fixed inset-0 flex items-center justify-center
-bg-black/70 backdrop-blur-sm">
+class="hidden fixed inset-0 flex items-center justify-center bg-black/70">
 
-  <div class="glass-card w-[90%] max-w-sm p-5 animate-modal">
+  <div class="glass-card w-[90%] max-w-sm p-5">
 
-    <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-semibold">Friend Requests</h2>
-      <button onclick="closeRequests()" class="text-xl opacity-60">✕</button>
+    <div class="flex justify-between mb-3">
+      <h2>Friend Requests</h2>
+      <button onclick="closeRequests()">✕</button>
     </div>
 
-    <div id="requestList" class="space-y-3 max-h-[300px] overflow-auto"></div>
+    <div id="requestList"></div>
 
   </div>
 
 </div>
 
+<!-- TOAST -->
+<div id="toast"></div>
+
 <script>
 const API="https://worker-chat.jihadwajib68.workers.dev"
-
-const user = JSON.parse(localStorage.getItem("user") || "{}")
+const user = JSON.parse(localStorage.getItem("user"))
 
 document.getElementById("username").innerText =
-  "Hi, " + (user.name || "User")
+  "Hi, " + user.name
 
 document.getElementById("avatar").src =
-  user.avatar || "https://ui-avatars.com/api/?name=" + (user.name || "User")
+  user.avatar || "https://ui-avatars.com/api/?name=" + user.name
 
 function navigate(page, el){
   const frame = document.getElementById("frame")
-
   frame.style.opacity = 0
   setTimeout(()=>{
     frame.src = page
@@ -250,53 +194,41 @@ function navigate(page, el){
   },150)
 
   document.querySelectorAll(".nav-btn")
-    .forEach(b => b.classList.remove("active"))
+    .forEach(b=>b.classList.remove("active"))
 
   el.classList.add("active")
 }
 
 let requests = []
 
-async function loadRequests(){
-  const res = await fetch(API + "/requests?email=" + user.email)
-  requests = await res.json()
-
+function updateBadge(){
   const badge = document.getElementById("notifCount")
-
   if(requests.length){
     badge.classList.remove("hidden")
     badge.innerText = requests.length
   }else{
     badge.classList.add("hidden")
   }
-
-  renderRequests()
 }
 
 function renderRequests(){
-  const container = document.getElementById("requestList")
+  const el = document.getElementById("requestList")
 
   if(!requests.length){
-    container.innerHTML = `<div class="text-center opacity-60 py-6">No requests</div>`
+    el.innerHTML = `<div class="text-center opacity-60">No requests</div>`
     return
   }
 
-  container.innerHTML = requests.map(r=>`
-    <div class="request-card">
+  el.innerHTML = requests.map(r=>`
+    <div class="request-card mb-2">
 
-      <div class="flex items-center gap-3">
-        <img src="https://ui-avatars.com/api/?name=${r.from_email}&background=7c3aed&color=fff"
-          class="w-10 h-10 rounded-full">
-
-        <div>
-          <p class="text-sm font-medium">${r.from_email}</p>
-          <p class="text-xs opacity-50">wants to connect</p>
-        </div>
+      <div>
+        <p class="text-sm">${r.from_email}</p>
       </div>
 
       <div class="flex gap-2">
-        <button onclick="respond(${r.id}, 'accept')" class="btn btn-accept">✔</button>
-        <button onclick="respond(${r.id}, 'reject')" class="btn btn-reject">✕</button>
+        <button onclick="respond(${r.id},'accept')">✔</button>
+        <button onclick="respond(${r.id},'reject')">✕</button>
       </div>
 
     </div>
@@ -304,26 +236,68 @@ function renderRequests(){
 }
 
 async function respond(id, action){
-  await fetch(API + "/respond-request",{
+  await fetch(API+"/respond-request",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
     body:JSON.stringify({id, action})
   })
-
-  loadRequests()
 }
 
 function toggleRequests(){
   document.getElementById("requestPopup").classList.remove("hidden")
 }
-
 function closeRequests(){
   document.getElementById("requestPopup").classList.add("hidden")
 }
 
-loadRequests()
-setInterval(loadRequests, 5000)
+function showToast(msg){
+  const t = document.getElementById("toast")
+  t.innerText = msg
+  t.classList.add("show")
+  setTimeout(()=>t.classList.remove("show"),2000)
+}
 
+//// 🔥 WEBSOCKET GLOBAL
+const ws = new WebSocket(
+  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
+)
+
+ws.onopen = ()=>{
+  ws.send(JSON.stringify({
+    type:"online",
+    user:user.email
+  }))
+}
+
+ws.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  // 📥 FULL LIST
+  if(msg.type==="request_list"){
+    requests = msg.data || []
+    updateBadge()
+    renderRequests()
+  }
+
+  // ➕ NEW REQUEST
+  if(msg.type==="new_request"){
+    requests.unshift(msg.data)
+    updateBadge()
+    renderRequests()
+  }
+
+  // ❌ REMOVE
+  if(msg.type==="request_update"){
+    requests = requests.filter(r=>r.id!==msg.id)
+    updateBadge()
+    renderRequests()
+  }
+
+  // 🎉 ACCEPT TOAST
+  if(msg.type==="request_accepted"){
+    showToast(msg.name + " menerima pertemanan 🎉")
+  }
+}
 </script>
 
 </body>

@@ -125,13 +125,13 @@ this.ws = new WebSocket(`${WS}?room=${this.room}`)
 
 this.ws.onopen = () => {
 
-  // 🔥 INIT HISTORY
+  // INIT HISTORY
   this.ws.send(JSON.stringify({
     type:"init_messages",
     room:this.room
   }))
 
-  // 🔥 ONLINE
+  // ONLINE
   this.ws.send(JSON.stringify({
     type:"online",
     user:this.user.email
@@ -141,22 +141,37 @@ this.ws.onopen = () => {
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // 🔥 INIT HISTORY
+  // INIT HISTORY
   if(msg.type==="init_messages"){
     this.messages = msg.messages || []
     this.scrollBottom(true)
     return
   }
 
-  // 🔥 MESSAGE
+  // MESSAGE
   if(msg.type==="message"){
+
+    if(msg.room !== this.room) return
+
+    const last = this.messages[this.messages.length - 1]
+
+    // 🔥 ANTI DOUBLE
+    if(
+      last &&
+      last.text === msg.text &&
+      last.sender === msg.sender &&
+      Math.abs(new Date(last.created_at) - new Date(msg.created_at)) < 1000
+    ){
+      return
+    }
+
     this.messages.push(msg)
     this.text=''
     this.scrollBottom()
     return
   }
 
-  // 🔥 TYPING
+  // TYPING
   if(msg.type==="typing"){
     if(msg.sender===this.user.email) return
 
@@ -199,8 +214,7 @@ send(){
     type:"message",
     room:this.room,
     sender:this.user.email,
-    text:this.text,
-    created_at:new Date().toISOString()
+    text:this.text
   }))
 },
 

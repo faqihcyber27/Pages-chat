@@ -149,8 +149,8 @@ const res = await fetch(API + (this.isLogin ? "/login" : "/register"), {
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
     name: this.name,
-    email: this.email,
-    password: this.password
+    email: this.email.trim().toLowerCase(),
+    password: this.password.trim()
   })
 })
 

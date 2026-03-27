@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://unpkg.com/vue@3"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-[#020617] text-white">
+
+<div id="app" class="p-4">
+
+<h1 class="text-xl mb-4">Profile</h1>
+
+<img :src="user.avatar || 'https://i.pravatar.cc/150'"
+class="w-24 h-24 rounded-full mb-4">
+
+<input v-model="user.name"
+class="w-full p-2 mb-2 bg-white/10 rounded">
+
+<textarea v-model="user.bio"
+class="w-full p-2 mb-2 bg-white/10 rounded"></textarea>
+
+<button @click="saveProfile"
+class="bg-purple-600 w-full p-2 rounded mb-3">
+Save
+</button>
+
+<button @click="logout"
+class="bg-red-500 w-full p-2 rounded">
+Logout
+</button>
+
+</div>
+
+<script>
+const API="https://worker-chat.jihadwajib68.workers.dev"
+
+if(!localStorage.getItem("user")){
+parent.location.href="index.html"
+}
+
+Vue.createApp({
+data(){
+return{
+user: JSON.parse(localStorage.getItem("user"))
+}
+},
+
+methods:{
+async saveProfile(){
+await fetch(API+"/update-profile",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify(this.user)
+})
+
+localStorage.setItem("user", JSON.stringify(this.user))
+alert("Saved")
+},
+
+logout(){
+localStorage.removeItem("user")
+parent.location.href="index.html"
+}
+}
+
+}).mount("#app")
+</script>
+
+</body>
+</html>

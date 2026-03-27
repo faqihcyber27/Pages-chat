@@ -192,6 +192,10 @@ this.wsGlobal = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
 
+setInterval(()=>{
+  this.loadChats()
+},1500)
+
 this.wsGlobal.onopen = ()=>{
   this.wsGlobal.send(JSON.stringify({
     type:"online",

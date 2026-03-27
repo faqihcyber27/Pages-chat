@@ -50,8 +50,10 @@ body {background:#020617;color:white;}
 <div class="flex-1 overflow-auto px-4 mt-4">
 
   <div v-for="c in normalChats"
-       @click="openChat(c)"
-       class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
+     @click="openChat(c)"
+     @touchstart="startPress(c)"
+     @touchend="cancelPress"
+     class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
 
     <!-- LEFT -->
     <div class="flex items-center gap-3">
@@ -138,7 +140,30 @@ body {background:#020617;color:white;}
     </div>
 
   </div>
+  <!-- DELETE CHAT -->
+  <div v-if="selectedChat"
+    class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
+    <div class="bg-gray-900 p-5 rounded-xl w-72 text-center">
+
+      <p class="mb-4">
+        Delete chat with {{selectedChat.friend_name}}?
+      </p>
+
+      <div class="flex gap-2">
+        <button @click="deleteChat"
+          class="bg-red-500 flex-1 p-2 rounded">
+            Delete
+        </button>
+
+        <button @click="selectedChat=null"
+          class="bg-gray-600 flex-1 p-2 rounded">
+          Cancel
+        </button>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 </div>
@@ -156,6 +181,9 @@ search:'',
 
 onlineUsers:[],
 typingUsers:{},
+
+selectedChat:null,
+pressTimer:null,
 
 wsRooms:{},
 wsGlobal:null,
@@ -236,6 +264,35 @@ togglePin(c){
 
 isPinned(email){
   return this.pinned.includes(email)
+},
+
+startPress(c){
+  this.pressTimer = setTimeout(()=>{
+    this.selectedChat = c
+  },600)
+},
+
+cancelPress(){
+  clearTimeout(this.pressTimer)
+},
+
+async deleteChat(){
+
+  await fetch(API+"/delete-chat",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({
+      user1:this.user.email,
+      user2:this.selectedChat.friend_email
+    })
+  })
+
+  // 🔥 hapus dari UI langsung (tanpa reload)
+  this.chats = this.chats.filter(c =>
+    c.friend_email !== this.selectedChat.friend_email
+  )
+
+  this.selectedChat = null
 },
 
 // 🔥 FIX UTAMA REALTIME

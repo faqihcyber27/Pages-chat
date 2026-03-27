@@ -15,15 +15,8 @@ body {background:#020617;color:white;}
   backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.08);
   transition: 0.3s;
-  -webkit-user-select:none;
-  user-select:none;
 }
 .chat-card:hover {transform: scale(1.02);}
-
-@keyframes scaleIn{
-  from{transform:scale(0.8);opacity:0}
-  to{transform:scale(1);opacity:1}
-}
 </style>
 </head>
 
@@ -39,7 +32,7 @@ body {background:#020617;color:white;}
     class="w-full p-3 rounded-xl bg-white/10 border border-white/10">
 </div>
 
-<!-- PINNED -->
+<!-- 📌 PINNED -->
 <div v-if="pinnedChats.length" class="px-4 mt-4">
   <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
 
@@ -54,16 +47,13 @@ body {background:#020617;color:white;}
 </div>
 
 <!-- LIST -->
-<div class="flex-1 overflow-auto px-4 mt-4"
-     @scroll="cancelPress">
+<div class="flex-1 overflow-auto px-4 mt-4">
 
   <div v-for="c in normalChats"
-     @click="handleClick(c)"
-     @touchstart="startPress(c, $event)"
-     @touchend="endPress"
-     @touchmove="cancelPress"
-     class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
+       @click="openChat(c)"
+       class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
 
+    <!-- LEFT -->
     <div class="flex items-center gap-3">
 
       <img v-if="c.friend_avatar"
@@ -78,23 +68,49 @@ body {background:#020617;color:white;}
 
       <div>
 
+        <!-- NAME + ONLINE -->
         <p class="font-semibold flex items-center gap-2">
           {{ getName(c) }}
+
           <span v-if="isOnline(c.friend_email)"
             class="w-2 h-2 bg-green-400 rounded-full"></span>
         </p>
 
+        <!-- MESSAGE PREVIEW (🔥 dari home) -->
         <p class="text-sm"
           :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-60'">
 
+          <!-- typing -->
           <span v-if="typingUsers[c.friend_email]">
             sedang mengetik...
           </span>
 
-          <span v-else-if="c.last_message">
-            {{c.last_message}}
+          <!-- image -->
+          <span v-else-if="
+            (c.last_file_type && c.last_file_type.includes('image')) ||
+            c.last_message === '📷 Foto'
+          ">
+            📷 Foto
           </span>
 
+          <!-- file -->
+          <span v-else-if="
+            c.last_file_type ||
+            c.last_message === '📎 File'
+          ">
+            📎 File
+          </span>
+
+          <!-- text -->
+          <span v-else-if="c.last_message">
+            {{c.last_message}}
+            <span class="ml-1 text-xs">
+              <span v-if="c.unread==0">✓✓</span>
+              <span v-else>✓</span>
+            </span>
+          </span>
+
+          <!-- default -->
           <span v-else>No message</span>
 
         </p>
@@ -102,6 +118,7 @@ body {background:#020617;color:white;}
       </div>
     </div>
 
+    <!-- RIGHT -->
     <div class="text-right">
 
       <p class="text-xs opacity-50">
@@ -126,31 +143,6 @@ body {background:#020617;color:white;}
 
 </div>
 
-<!-- MODAL -->
-<div v-if="selectedChat"
-class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-  <div class="bg-gray-900 p-5 rounded-xl w-72 text-center animate-[scaleIn_.2s]">
-
-    <p class="mb-4">
-      Delete chat with {{selectedChat.friend_name}}?
-    </p>
-
-    <div class="flex gap-2">
-      <button @click="deleteChat"
-        class="bg-red-500 flex-1 p-2 rounded">
-        Delete
-      </button>
-
-      <button @click="selectedChat=null"
-        class="bg-gray-600 flex-1 p-2 rounded">
-        Cancel
-      </button>
-    </div>
-
-  </div>
-</div>
-
 <script>
 const API="https://worker-chat.jihadwajib68.workers.dev"
 
@@ -161,13 +153,13 @@ return{
 user: JSON.parse(localStorage.getItem("user")),
 chats:[],
 search:'',
+
 onlineUsers:[],
 typingUsers:{},
-selectedChat:null,
-pressTimer:null,
-isLongPress:false,
+
 wsRooms:{},
 wsGlobal:null,
+
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
 }
 },
@@ -178,20 +170,24 @@ pinnedChats(){
 },
 normalChats(){
   return this.chats.filter(c=>!this.pinned.includes(c.friend_email))
+},
+watch:{
+  chats(){
+    this.$nextTick(()=>{
+      this.initRoomSockets()
+    })
+  }
 }
 },
 
 mounted(){
 
-this.selectedChat = null
-this.isLongPress = false
-
+// 🔥 WAJIB: load + init socket
 this.loadChats().then(()=>{
   this.initRoomSockets()
 })
 
-setInterval(()=>{ this.loadChats() },1500)
-
+// 🔥 GLOBAL ONLINE
 this.wsGlobal = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
@@ -201,10 +197,20 @@ this.wsGlobal.onopen = ()=>{
     type:"online",
     user:this.user.email
   }))
+
+  setInterval(()=>{
+    if(this.wsGlobal.readyState===1){
+      this.wsGlobal.send(JSON.stringify({
+        type:"online",
+        user:this.user.email
+      }))
+    }
+  },5000)
 }
 
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
+
   if(msg.type==="online_list"){
     this.onlineUsers = msg.users || []
   }
@@ -214,75 +220,47 @@ this.wsGlobal.onmessage = (e)=>{
 
 methods:{
 
-// ================= CLICK CONTROL =================
-handleClick(c){
-  if(this.isLongPress){
-    this.isLongPress = false
-    return
+togglePin(c){
+  const i = this.pinned.indexOf(c.friend_email)
+  if(i>-1){
+    this.pinned.splice(i,1)
+  }else{
+    this.pinned.push(c.friend_email)
   }
-  this.openChat(c)
+  localStorage.setItem("pinned", JSON.stringify(this.pinned))
 },
 
-// ================= LONG PRESS FIX =================
-startPress(c, e){
-
-  if(!e || !e.touches || e.touches.length !== 1) return
-
-  this.isLongPress = false
-
-  this.pressTimer = setTimeout(()=>{
-    this.isLongPress = true
-    this.selectedChat = c
-    navigator.vibrate?.(50)
-  },700)
+isPinned(email){
+  return this.pinned.includes(email)
 },
 
-endPress(){
-  clearTimeout(this.pressTimer)
-},
-
-cancelPress(){
-  clearTimeout(this.pressTimer)
-},
-
-// ================= DELETE =================
-async deleteChat(){
-
-  await fetch(API+"/delete-chat",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      user1:this.user.email,
-      user2:this.selectedChat.friend_email
-    })
-  })
-
-  this.chats = this.chats.filter(c =>
-    c.friend_email !== this.selectedChat.friend_email
-  )
-
-  this.selectedChat = null
-},
-
-// ================= SOCKET =================
+// 🔥 FIX UTAMA REALTIME
 initRoomSockets(){
 
 this.chats.forEach(c=>{
 
 const room = [this.user.email,c.friend_email].sort().join("_")
+
 if(this.wsRooms[room]) return
 
 const ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room="+room
 )
 
+ws.onopen = ()=>{
+  console.log("WS READY:", room)
+}
+
 ws.onmessage = (e)=>{
 const msg = JSON.parse(e.data)
 
-// typing
+// ================= TYPING =================
 if(msg.type==="typing"){
   if(msg.sender===this.user.email) return
-  this.typingUsers = {...this.typingUsers,[msg.sender]:true}
+  this.typingUsers = {
+    ...this.typingUsers,
+    [msg.sender]: true
+  }
   setTimeout(()=>{
     const t = {...this.typingUsers}
     delete t[msg.sender]
@@ -290,16 +268,22 @@ if(msg.type==="typing"){
   },1000)
 }
 
-// message
+// ================= MESSAGE =================
 if(!msg.type || msg.type==="message"){
 
-  let friend = msg.sender === this.user.email
-    ? msg.room.split("_").find(x=>x!==this.user.email)
-    : msg.sender
+  let friend
+
+  if(msg.sender === this.user.email){
+    const parts = msg.room.split("_")
+    friend = parts.find(x=>x!==this.user.email)
+  }else{
+    friend = msg.sender
+  }
 
   const chat = this.chats.find(x=>x.friend_email===friend)
 
   if(chat){
+
     chat.last_message = msg.text || "📎 File"
     chat.updated_at = msg.created_at
 
@@ -307,13 +291,26 @@ if(!msg.type || msg.type==="message"){
       chat.unread = (chat.unread||0)+1
     }
 
+    // 🔥 FORCE REACTIVE UPDATE
     this.chats = [
       chat,
       ...this.chats.filter(x=>x.friend_email!==friend)
     ]
+
   }
+
 }
 
+// ================= READ =================
+if(msg.type==="read"){
+  const chat = this.chats.find(x=>x.friend_email===msg.user)
+  if(chat) chat.unread=0
+}
+
+}
+
+ws.onclose = ()=>{
+  delete this.wsRooms[room]
 }
 
 this.wsRooms[room]=ws
@@ -328,15 +325,38 @@ this.chats = await res.json()
 },
 
 openChat(c){
+
+const room = [this.user.email,c.friend_email].sort().join("_")
+
+fetch(API+"/mark-read",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+room:room,
+user:this.user.email
+})
+})
+
+c.unread=0
+
 localStorage.setItem("activeChat", JSON.stringify({
   email:c.friend_email,
-  name:c.friend_name
+  name:c.friend_name,
+  avatar:c.friend_avatar,
+  bio:c.friend_bio,
+  last_seen:c.friend_last_seen
 }))
-location.href="chat.html"
+
+parent.location.href="chat.html"
 },
 
-getName(c){ return c.friend_name || c.friend_email },
-getInitial(name){ return name.charAt(0).toUpperCase() },
+getName(c){
+return c.friend_name || c.friend_email
+},
+
+getInitial(name){
+return name.charAt(0).toUpperCase()
+},
 
 getColor(name){
 const colors=["#7c3aed","#4f46e5","#059669","#dc2626"]
@@ -348,20 +368,20 @@ return colors[Math.abs(hash)%colors.length]
 },
 
 isOnline(email){
-  return this.onlineUsers.includes(email)
+return this.onlineUsers.includes(email)
 },
 
 formatTime(t){
 if(!t) return ''
 const d=new Date(t)
 return d.getHours().toString().padStart(2,'0')+':'+
-       d.getMinutes().toString().padStart(2,'0')
+d.getMinutes().toString().padStart(2,'0')
 }
 
 }
 
 }).mount("#app")
-</script>
+  </script>
 
 </body>
 </html>

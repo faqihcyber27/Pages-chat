@@ -316,24 +316,27 @@ this.ws.onmessage = (e)=>{
     return
   }
   
-  // 🔥 REALTIME PROFILE UPDATE
-  if(msg.type==="profile_update"){
-
-  const u = msg.user
-
-  this.contacts = this.contacts.map(c=>{
-    if(c.email === u.email){
+  // 🔥 PROFILE UPDATE
+if(msg.type === "profile_update"){
+  this.contacts = this.contacts.map(c => {
+    if(c.email === msg.user.email){
       return {
         ...c,
-        name: u.name,
-        avatar: u.avatar,
-        bio: u.bio
+        name: msg.user.name,
+        avatar: msg.user.avatar,
+        bio: msg.user.bio
       }
     }
     return c
   })
+}
 
-  return
+// 🔥 FORCE REFRESH
+if(msg.type === "contact_update"){
+  this.ws.send(JSON.stringify({
+    type:"init_contacts",
+    user:this.user.email
+  }))
 }
 
   // ================= ONLINE =================

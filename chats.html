@@ -170,6 +170,13 @@ pinnedChats(){
 },
 normalChats(){
   return this.chats.filter(c=>!this.pinned.includes(c.friend_email))
+},
+watch:{
+  chats(){
+    this.$nextTick(()=>{
+      this.initRoomSockets()
+    })
+  }
 }
 },
 
@@ -184,6 +191,10 @@ this.loadChats().then(()=>{
 this.wsGlobal = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
+
+setInterval(()=>{
+  this.loadChats()
+},5000)
 
 this.wsGlobal.onopen = ()=>{
   this.wsGlobal.send(JSON.stringify({
@@ -249,19 +260,20 @@ const msg = JSON.parse(e.data)
 
 // ================= TYPING =================
 if(msg.type==="typing"){
-
   if(msg.sender===this.user.email) return
-  if(msg.room !== room) return
-
-  this.typingUsers[msg.sender]=true
-
+  this.typingUsers = {
+    ...this.typingUsers,
+    [msg.sender]: true
+  }
   setTimeout(()=>{
-    delete this.typingUsers[msg.sender]
-  },1200)
+    const t = {...this.typingUsers}
+    delete t[msg.sender]
+    this.typingUsers = t
+  },1000)
 }
 
 // ================= MESSAGE =================
-if(msg.type==="message"){
+if(!msg.type || msg.type==="message"){
 
   let friend
 

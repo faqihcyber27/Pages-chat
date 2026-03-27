@@ -374,11 +374,18 @@ async deleteContact(){
       friend_email:this.selectedContact.email
     })
   })
+  
+  // 🔥 FIX 1: langsung update UI (biar tidak nunggu WS)
+  this.contacts = this.contacts.filter(c =>
+    c.email !== this.selectedContact.email
+  )
 
-  // 🔥 realtime trigger
-  this.ws.send(JSON.stringify({
-    type:"contact_update"
-  }))
+   // 🔥 SAFE SEND WS
+  if(this.ws && this.ws.readyState === 1){
+    this.ws.send(JSON.stringify({
+      type:"contact_update"
+    }))
+  }
 
   this.selectedContact = null
   this.showToastMsg("Contact deleted 🗑")

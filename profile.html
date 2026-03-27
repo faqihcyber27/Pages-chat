@@ -194,7 +194,18 @@ loading:false
 }
 },
 
-mounted(){
+async mounted(){
+  // 🔥 LOAD PROFILE DARI SERVER (INIT)
+  const res = await fetch(
+    "https://worker-chat.jihadwajib68.workers.dev/get-profile?email=" + this.user.email
+  )
+
+  const data = await res.json()
+
+  if(data && data.email){
+    this.user = data
+    localStorage.setItem("user", JSON.stringify(this.user))
+  }
 
   // 🔥 CONNECT WS
   this.ws = new WebSocket(WS_URL)

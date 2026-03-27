@@ -53,6 +53,7 @@ class="w-full mb-4 p-3 rounded-xl bg-white/10 border border-white/10">
 
 <!-- CONTACT LIST -->
 <div v-for="c in filteredContacts"
+     :key="c.email"
      @click="startChat(c)"
      class="contact-card p-3 mb-3 rounded-2xl flex items-center justify-between cursor-pointer">
 
@@ -254,22 +255,13 @@ this.ws.onmessage = (e)=>{
 methods:{
 
 async loadContacts(){
-  const newContacts = await (await fetch(API+"/contacts?email="+this.user.email)).json()
-
-  const map = new Map()
-
-  this.contacts.forEach(c=>{
-    map.set(c.email, c)
-  })
-
-  newContacts.forEach(c=>{
-    map.set(c.email,{
-      ...map.get(c.email),
-      ...c
-    })
-  })
-
-  this.contacts = Array.from(map.values())
+  const res = await fetch(API+"/contacts?email="+this.user.email)
+  const newContacts = await res.json()
+  // 🔥 langsung replace (biar delete ke-detect)
+  this.contacts = []
+  setTimeout(()=>{
+    this.contacts = newContacts
+  },0)
 },
 
 async sendRequest(){
@@ -311,8 +303,11 @@ async deleteContact(){
     friend_email:this.selectedContact.email
     })
   })
-  this.selectedContact=null
-  this.loadContacts()
+  this.contacts = this.contacts.filter(c =>
+  c.email !== this.selectedContact.email
+)
+
+this.selectedContact = null
 },
 
 viewProfile(c){

@@ -14,14 +14,9 @@ body {background:#020617;color:white;}
   background: rgba(255,255,255,0.05);
   backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.08);
-  box-shadow:
-    0 8px 24px rgba(0,0,0,0.25),
-    inset 0 1px 0 rgba(255,255,255,0.05);
   transition: 0.3s;
 }
-.chat-card:hover {
-  transform: scale(1.02);
-}
+.chat-card:hover {transform: scale(1.02);}
 </style>
 </head>
 
@@ -29,10 +24,8 @@ body {background:#020617;color:white;}
 
 <div id="app" class="h-full flex flex-col">
 
-<!-- TITLE -->
 <div class="px-4 mt-4 text-xl font-semibold">Chats</div>
 
-<!-- SEARCH -->
 <div class="px-4 mt-3">
   <input v-model="search"
     placeholder="Search..."
@@ -48,7 +41,13 @@ body {background:#020617;color:white;}
        class="chat-card p-3 mb-2 rounded-xl flex justify-between">
 
     <p>{{getName(c)}}</p>
-    <span class="text-yellow-400">⭐</span>
+
+    <!-- 🔥 UNPIN -->
+    <button @click.stop="togglePin(c)"
+      class="text-yellow-400">
+      ⭐
+    </button>
+
   </div>
 </div>
 
@@ -59,7 +58,6 @@ body {background:#020617;color:white;}
        @click="openChat(c)"
        class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
 
-    <!-- LEFT -->
     <div class="flex items-center gap-3">
 
       <img v-if="c.friend_avatar"
@@ -76,6 +74,7 @@ body {background:#020617;color:white;}
 
         <p class="font-semibold flex items-center gap-2">
           {{ getName(c) }}
+
           <span v-if="isOnline(c.friend_email)"
             class="w-2 h-2 bg-green-400 rounded-full"></span>
         </p>
@@ -86,6 +85,7 @@ body {background:#020617;color:white;}
           <span v-if="typingUsers[c.friend_email]">
             sedang mengetik...
           </span>
+
           <span v-else>
             {{c.last_message}}
           </span>
@@ -95,14 +95,15 @@ body {background:#020617;color:white;}
       </div>
     </div>
 
-    <!-- RIGHT -->
     <div class="text-right">
 
       <p class="text-xs opacity-50">
         {{formatTime(c.updated_at)}}
       </p>
 
-      <button @click.stop="togglePin(c)">
+      <!-- ⭐ PIN -->
+      <button @click.stop="togglePin(c)"
+        :class="isPinned(c.friend_email)?'text-yellow-400':'opacity-40'">
         ⭐
       </button>
 
@@ -132,7 +133,6 @@ search:'',
 onlineUsers:[],
 typingUsers:{},
 wsRooms:{},
-wsGlobal:null,
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
 }
 },
@@ -145,45 +145,17 @@ pinnedChats(){
 
 normalChats(){
   return this.chats.filter(c=>!this.pinned.includes(c.friend_email))
-},
-
-},
-
-async mounted(){
-
-// 🔔 izin notif
-if("Notification" in window){
-  Notification.requestPermission()
 }
 
+},
+
+mounted(){
 this.loadChats()
-
-// GLOBAL WS
-this.wsGlobal = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
-)
-
-this.wsGlobal.onopen = ()=>{
-  this.wsGlobal.send(JSON.stringify({
-    type:"online",
-    user:this.user.email
-  }))
-}
-
-this.wsGlobal.onmessage = (e)=>{
-  const msg = JSON.parse(e.data)
-
-  if(msg.type==="online_list"){
-    this.onlineUsers = msg.users
-  }
-}
-
-this.initRoomSockets()
-
 },
 
 methods:{
 
+// ✅ FIX PIN
 togglePin(c){
   const i = this.pinned.indexOf(c.friend_email)
 
@@ -196,6 +168,11 @@ togglePin(c){
   localStorage.setItem("pinned", JSON.stringify(this.pinned))
 },
 
+isPinned(email){
+  return this.pinned.includes(email)
+},
+
+// ✅ FIX REALTIME SOCKET
 initRoomSockets(){
 
 this.chats.forEach(c=>{
@@ -211,32 +188,33 @@ const ws = new WebSocket(
 ws.onmessage = (e)=>{
 const msg = JSON.parse(e.data)
 
-// typing
+// 🔥 typing
 if(msg.type==="typing"){
+  if(msg.sender===this.user.email) return
   this.typingUsers[msg.sender]=true
   setTimeout(()=>delete this.typingUsers[msg.sender],800)
 }
 
-// message realtime
+// 🔥 FIX MESSAGE REALTIME
 if(msg.type==="message"){
 
-  const chat = this.chats.find(x=>x.friend_email===msg.sender)
+  const friend = msg.sender===this.user.email
+    ? msg.room.replace(this.user.email+"_","").replace("_"+this.user.email,"")
+    : msg.sender
+
+  const chat = this.chats.find(x=>x.friend_email===friend)
 
   if(chat){
     chat.last_message = msg.text || "📎 File"
     chat.updated_at = msg.created_at
-    chat.unread++
+
+    if(msg.sender !== this.user.email){
+      chat.unread = (chat.unread||0)+1
+    }
 
     // move top
     this.chats = this.chats.filter(x=>x!==chat)
     this.chats.unshift(chat)
-  }
-
-  // 🔔 NOTIFICATION
-  if(document.hidden && Notification.permission==="granted"){
-    new Notification("New Message",{
-      body: msg.text || "File received"
-    })
   }
 
 }
@@ -244,7 +222,7 @@ if(msg.type==="message"){
 // 🔥 READ SYNC
 if(msg.type==="read"){
   const chat = this.chats.find(x=>x.friend_email===msg.user)
-  if(chat) chat.unread = 0
+  if(chat) chat.unread=0
 }
 
 }
@@ -279,7 +257,15 @@ user:this.user.email
 
 c.unread=0
 
-localStorage.setItem("activeChat", JSON.stringify(c))
+// ✅ FIX SAFE DATA
+localStorage.setItem("activeChat", JSON.stringify({
+  email:c.friend_email,
+  name:c.friend_name,
+  avatar:c.friend_avatar,
+  bio:c.friend_bio,
+  last_seen:c.friend_last_seen
+}))
+
 parent.location.href="chat.html"
 },
 

@@ -36,9 +36,6 @@ body {background:#020617;color:white;}
 <div v-if="pinnedChats.length" class="px-4 mt-4">
   <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
 
-  <div v-if="pinnedChats.length" class="px-4 mt-4">
-  <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
-
   <div v-for="c in pinnedChats"
      @click="handleClick(c)"
      @touchstart="startPress(c, $event)"
@@ -108,7 +105,6 @@ body {background:#020617;color:white;}
     </div>
 
   </div>
-</div>
 </div>
 
 <!-- LIST -->

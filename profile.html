@@ -9,20 +9,20 @@
 
 <style>
 body {
-  background: linear-gradient(180deg, #020617, #020617, #020617);
+  background: linear-gradient(180deg, #020617, #020617);
   color: white;
 }
 
-/* 🔥 HEADER GRADIENT */
+/* HEADER */
 .profile-header {
   background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
-  border-radius: 20px;
-  padding: 30px 20px;
+  border-radius: 24px;
+  padding: 35px 20px;
+  text-align: center;
   position: relative;
   overflow: hidden;
 }
 
-/* glow */
 .profile-header::before {
   content:"";
   position:absolute;
@@ -30,13 +30,13 @@ body {
   background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 60%);
 }
 
-/* avatar */
+/* AVATAR */
 .avatar {
-  border: 2px solid rgba(255,255,255,0.2);
-  box-shadow: 0 10px 25px rgba(124,58,237,0.5);
+  border: 3px solid rgba(255,255,255,0.2);
+  box-shadow: 0 15px 35px rgba(124,58,237,0.6);
 }
 
-/* glass input */
+/* INPUT */
 .input-glass {
   background: rgba(255,255,255,0.05);
   backdrop-filter: blur(20px);
@@ -49,7 +49,7 @@ body {
   box-shadow: 0 0 15px rgba(124,58,237,0.4);
 }
 
-/* button gradient */
+/* BUTTON */
 .btn-primary {
   background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
   box-shadow: 0 10px 25px rgba(124,58,237,0.4);
@@ -60,7 +60,6 @@ body {
   transform: scale(1.03);
 }
 
-/* logout */
 .btn-danger {
   background: rgba(255,0,0,0.15);
   border: 1px solid rgba(255,0,0,0.3);
@@ -71,12 +70,32 @@ body {
   background: rgba(255,0,0,0.3);
 }
 
-/* edit button */
+/* TOAST */
+.toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(20,20,30,0.9);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 12px 20px;
+  border-radius: 14px;
+  opacity: 0;
+  transition: 0.3s;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* EDIT BUTTON */
 .edit-btn {
   position:absolute;
   bottom:0;
   right:0;
-  background: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.2);
   backdrop-filter: blur(10px);
   padding:6px;
   border-radius:50%;
@@ -89,14 +108,13 @@ body {
 <div id="app" class="p-4">
 
 <!-- HEADER -->
-<div class="profile-header text-center">
+<div class="profile-header">
 
   <div class="relative inline-block">
 
     <img :src="user.avatar || 'https://i.pravatar.cc/150'"
     class="w-28 h-28 rounded-full object-cover avatar">
 
-    <!-- upload -->
     <input type="file" ref="fileInput" @change="uploadAvatar" class="hidden">
 
     <button @click="$refs.fileInput.click()" class="edit-btn">
@@ -137,8 +155,11 @@ body {
 <div class="mt-6 space-y-3">
 
   <button @click="saveProfile"
-    class="btn-primary w-full py-3 rounded-xl font-semibold">
-    Save Changes
+    class="btn-primary w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2">
+
+    <span v-if="loading">⏳ Saving...</span>
+    <span v-else>Save Changes</span>
+
   </button>
 
   <button @click="logout"
@@ -146,6 +167,11 @@ body {
     Logout
   </button>
 
+</div>
+
+<!-- TOAST -->
+<div :class="['toast', showToast ? 'show' : '']">
+  {{toastMessage}}
 </div>
 
 </div>
@@ -160,11 +186,23 @@ if(!localStorage.getItem("user")){
 Vue.createApp({
 data(){
 return{
-user: JSON.parse(localStorage.getItem("user"))
+user: JSON.parse(localStorage.getItem("user")),
+showToast:false,
+toastMessage:"",
+loading:false
 }
 },
 
 methods:{
+
+showToastMsg(msg){
+  this.toastMessage = msg
+  this.showToast = true
+
+  setTimeout(()=>{
+    this.showToast = false
+  },2000)
+},
 
 async uploadAvatar(e){
   const file = e.target.files[0]
@@ -175,9 +213,14 @@ async uploadAvatar(e){
     this.user.avatar = reader.result
   }
   reader.readAsDataURL(file)
+
+  this.showToastMsg("Avatar updated")
 },
 
 async saveProfile(){
+
+  this.loading = true
+
   await fetch(API+"/update-profile",{
     method:"POST",
     headers:{"Content-Type":"application/json"},
@@ -185,7 +228,9 @@ async saveProfile(){
   })
 
   localStorage.setItem("user", JSON.stringify(this.user))
-  alert("Profile updated")
+
+  this.loading = false
+  this.showToastMsg("Profile saved successfully ✅")
 },
 
 logout(){

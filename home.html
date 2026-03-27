@@ -12,21 +12,63 @@ body {
   color: white;
 }
 
-/* smooth iframe */
-#frame {
-  transition: opacity 0.2s ease;
+/* ✨ HEADER PREMIUM */
+.header {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
+  position: relative;
+  overflow: hidden;
 }
 
-/* navbar glass */
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(255,255,255,0.2), transparent 60%);
+}
+
+/* 💎 GLASS NAVBAR */
 .navbar {
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.06);
+  backdrop-filter: blur(25px);
   border-top: 1px solid rgba(255,255,255,0.1);
+
+  box-shadow:
+    0 -10px 30px rgba(0,0,0,0.5),
+    inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
-/* active button */
+/* 👆 NAV BUTTON */
+.nav-btn {
+  position: relative;
+  padding: 10px 16px;
+  border-radius: 14px;
+  transition: 0.25s;
+}
+
+/* active */
 .active {
   color: #a78bfa;
+}
+
+/* glow active */
+.active::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  background: rgba(124,58,237,0.25);
+  filter: blur(10px);
+  z-index:-1;
+}
+
+/* hover feel */
+.nav-btn:active {
+  transform: scale(0.9);
+}
+
+/* iframe smooth */
+#frame {
+  transition: opacity 0.25s ease;
 }
 </style>
 </head>
@@ -42,10 +84,19 @@ if(!localStorage.getItem("user")){
 
 <div class="h-screen flex flex-col">
 
-  <!-- HEADER -->
-  <div class="p-4 bg-gradient-to-r from-purple-600 via-indigo-500 to-pink-500 shadow-lg">
-    <h1 class="text-lg font-semibold" id="username">Loading...</h1>
-    <p class="text-xs opacity-80">Realtime Chat App</p>
+  <!-- 🔥 HEADER PREMIUM -->
+  <div class="header p-5 flex items-center gap-3 shadow-xl">
+
+    <!-- AVATAR -->
+    <img id="avatar"
+      class="w-12 h-12 rounded-full object-cover border border-white/20 shadow-lg">
+
+    <!-- TEXT -->
+    <div>
+      <h1 class="text-lg font-semibold drop-shadow" id="username">Loading...</h1>
+      <p class="text-xs opacity-80">Realtime Chat App</p>
+    </div>
+
   </div>
 
   <!-- CONTENT -->
@@ -54,18 +105,21 @@ if(!localStorage.getItem("user")){
     class="flex-1 w-full border-0">
   </iframe>
 
-  <!-- NAVBAR -->
-  <div class="navbar flex justify-around py-3 text-xl">
+  <!-- 🔥 NAVBAR PREMIUM -->
+  <div class="navbar flex justify-around py-3 text-xl rounded-t-2xl">
 
-    <button onclick="navigate('chats.html', this)" class="active">
+    <button onclick="navigate('chats.html', this)"
+      class="nav-btn active">
       💬
     </button>
 
-    <button onclick="navigate('contacts.html', this)">
+    <button onclick="navigate('contacts.html', this)"
+      class="nav-btn">
       👤
     </button>
 
-    <button onclick="navigate('profile.html', this)">
+    <button onclick="navigate('profile.html', this)"
+      class="nav-btn">
       ⚙️
     </button>
 
@@ -74,9 +128,14 @@ if(!localStorage.getItem("user")){
 </div>
 
 <script>
-// 🔥 LOAD USER NAME
+// 🔥 LOAD USER
 const user = JSON.parse(localStorage.getItem("user") || "{}")
-document.getElementById("username").innerText = "Hi, " + (user.name || "User")
+
+document.getElementById("username").innerText =
+  "Hi, " + (user.name || "User")
+
+document.getElementById("avatar").src =
+  user.avatar || "https://ui-avatars.com/api/?name=" + (user.name || "User")
 
 // 🔥 NAVIGATION
 function navigate(page, el){
@@ -91,7 +150,7 @@ function navigate(page, el){
   },150)
 
   // active state
-  document.querySelectorAll(".navbar button")
+  document.querySelectorAll(".nav-btn")
     .forEach(b => b.classList.remove("active"))
 
   el.classList.add("active")

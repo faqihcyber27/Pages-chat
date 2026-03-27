@@ -12,7 +12,7 @@ body {
   color: white;
 }
 
-/* ✨ HEADER PREMIUM */
+/* HEADER */
 .header {
   background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
   position: relative;
@@ -26,7 +26,7 @@ body {
   background: radial-gradient(circle at top left, rgba(255,255,255,0.2), transparent 60%);
 }
 
-/* 💎 GLASS NAVBAR */
+/* NAVBAR */
 .navbar {
   background: rgba(255,255,255,0.06);
   backdrop-filter: blur(25px);
@@ -37,7 +37,6 @@ body {
     inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
-/* 👆 NAV BUTTON */
 .nav-btn {
   position: relative;
   padding: 10px 16px;
@@ -45,12 +44,10 @@ body {
   transition: 0.25s;
 }
 
-/* active */
 .active {
   color: #a78bfa;
 }
 
-/* glow active */
 .active::before {
   content:"";
   position:absolute;
@@ -61,12 +58,10 @@ body {
   z-index:-1;
 }
 
-/* hover feel */
 .nav-btn:active {
   transform: scale(0.9);
 }
 
-/* iframe smooth */
 #frame {
   transition: opacity 0.25s ease;
 }
@@ -84,17 +79,33 @@ if(!localStorage.getItem("user")){
 
 <div class="h-screen flex flex-col">
 
-  <!-- 🔥 HEADER PREMIUM -->
-  <div class="header p-5 flex items-center gap-3 shadow-xl">
+  <!-- 🔥 HEADER -->
+  <div class="header p-5 flex justify-between items-center shadow-xl">
 
-    <!-- AVATAR -->
-    <img id="avatar"
-      class="w-12 h-12 rounded-full object-cover border border-white/20 shadow-lg">
+    <!-- LEFT -->
+    <div class="flex items-center gap-3">
+      <img id="avatar"
+        class="w-12 h-12 rounded-full object-cover border border-white/20 shadow-lg">
 
-    <!-- TEXT -->
-    <div>
-      <h1 class="text-lg font-semibold drop-shadow" id="username">Loading...</h1>
-      <p class="text-xs opacity-80">Realtime Chat App</p>
+      <div>
+        <h1 class="text-lg font-semibold drop-shadow" id="username">Loading...</h1>
+        <p class="text-xs opacity-80">Realtime Chat App</p>
+      </div>
+    </div>
+
+    <!-- 🔔 NOTIF -->
+    <div class="relative">
+
+      <button onclick="toggleRequests()"
+        class="text-2xl hover:scale-110 transition">
+        🔔
+      </button>
+
+      <span id="notifCount"
+        class="hidden absolute -top-2 -right-2 bg-red-500 text-xs px-1 rounded-full">
+        0
+      </span>
+
     </div>
 
   </div>
@@ -105,7 +116,7 @@ if(!localStorage.getItem("user")){
     class="flex-1 w-full border-0">
   </iframe>
 
-  <!-- 🔥 NAVBAR PREMIUM -->
+  <!-- NAVBAR -->
   <div class="navbar flex justify-around py-3 text-xl rounded-t-2xl">
 
     <button onclick="navigate('chats.html', this)"
@@ -127,7 +138,28 @@ if(!localStorage.getItem("user")){
 
 </div>
 
+<!-- 🔔 POPUP REQUEST -->
+<div id="requestPopup"
+class="hidden fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+
+  <div class="bg-[#020617] p-5 rounded-xl w-80">
+
+    <h2 class="mb-3 font-semibold">Friend Requests</h2>
+
+    <div id="requestList"></div>
+
+    <button onclick="closeRequests()"
+      class="mt-3 w-full bg-gray-600 p-2 rounded">
+      Close
+    </button>
+
+  </div>
+
+</div>
+
 <script>
+const API="https://worker-chat.jihadwajib68.workers.dev"
+
 // 🔥 LOAD USER
 const user = JSON.parse(localStorage.getItem("user") || "{}")
 
@@ -141,7 +173,6 @@ document.getElementById("avatar").src =
 function navigate(page, el){
   const frame = document.getElementById("frame")
 
-  // fade out
   frame.style.opacity = 0
 
   setTimeout(()=>{
@@ -149,12 +180,81 @@ function navigate(page, el){
     frame.style.opacity = 1
   },150)
 
-  // active state
   document.querySelectorAll(".nav-btn")
     .forEach(b => b.classList.remove("active"))
 
   el.classList.add("active")
 }
+
+// ================= 🔔 REQUEST =================
+
+let requests = []
+
+async function loadRequests(){
+  const res = await fetch(API + "/requests?email=" + user.email)
+  requests = await res.json()
+
+  const badge = document.getElementById("notifCount")
+
+  if(requests.length){
+    badge.classList.remove("hidden")
+    badge.innerText = requests.length
+  }else{
+    badge.classList.add("hidden")
+  }
+
+  renderRequests()
+}
+
+function renderRequests(){
+  const container = document.getElementById("requestList")
+
+  if(!requests.length){
+    container.innerHTML = "<p class='opacity-60'>No requests</p>"
+    return
+  }
+
+  container.innerHTML = requests.map(r=>`
+    <div class="mb-3">
+      <p>${r.from_email}</p>
+
+      <div class="flex gap-2 mt-2">
+        <button onclick="respond(${r.id}, 'accept')"
+          class="bg-green-500 px-2 rounded">
+          Accept
+        </button>
+
+        <button onclick="respond(${r.id}, 'reject')"
+          class="bg-red-500 px-2 rounded">
+          Reject
+        </button>
+      </div>
+    </div>
+  `).join("")
+}
+
+async function respond(id, action){
+  await fetch(API + "/respond-request",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({id, action})
+  })
+
+  loadRequests()
+}
+
+function toggleRequests(){
+  document.getElementById("requestPopup").classList.remove("hidden")
+}
+
+function closeRequests(){
+  document.getElementById("requestPopup").classList.add("hidden")
+}
+
+// 🔥 AUTO LOAD
+loadRequests()
+setInterval(loadRequests, 5000)
+
 </script>
 
 </body>

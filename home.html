@@ -752,7 +752,7 @@ wsRooms:{},
 tab:'chats',
 contacts:[],
 chats:[],
-favorites:[],
+favorites: JSON.parse(localStorage.getItem("favorites") || "[]"),
 requests:[],
 search:'',
 showModal:false,
@@ -1013,6 +1013,38 @@ handleRealtimeMessage(msg){
   this.chatMap[friend],
   ...Object.values(this.chatMap).filter(c => c.friend_email !== friend)
 ]
+},
+
+async deleteChat(){
+
+  if(!this.selectedChat) return
+
+  const email = this.selectedChat.friend_email
+  const room = [this.user.email, email].sort().join("_")
+
+  try{
+
+    await fetch(API + "/delete-chat", {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        room: room,
+        user: this.user.email
+      })
+    })
+
+  }catch(e){
+    console.log("delete error", e)
+  }
+
+  // 🔥 remove dari UI
+  delete this.chatMap[email]
+
+  this.chatMap = { ...this.chatMap }
+
+  this.chats = Object.values(this.chatMap)
+
+  this.selectedChat = null
 },
 
 async saveProfile(){

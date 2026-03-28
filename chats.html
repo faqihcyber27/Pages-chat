@@ -177,11 +177,6 @@ this.wsGlobal.onopen = ()=>{
     type:"online",
     user:this.user.email
   }))
-
-  this.wsGlobal.send(JSON.stringify({
-    type:"init_chats",
-    user:this.user.email
-  }))
 }
 
 this.wsGlobal.onmessage = (e)=>{
@@ -189,12 +184,23 @@ this.wsGlobal.onmessage = (e)=>{
 
   // INIT
   if(msg.type === "init_chats"){
-    this.chats = (msg.chats || []).map(c=>({
-      ...c,
-      unread: Number(localStorage.getItem("unread_"+c.friend_email)) || 0
+  this.chats = (msg.chats || []).map(c=>({
+    ...c,
+    unread: Number(localStorage.getItem("unread_"+c.friend_email)) || 0
+  }))
+
+  // 🔥 WAJIB: subscribe semua room
+  this.chats.forEach(c=>{
+    const room = [this.user.email, c.friend_email].sort().join("_")
+
+    this.wsGlobal.send(JSON.stringify({
+      type:"subscribe",
+      room
     }))
-    return
-  }
+  })
+
+  return
+}
 
   // ONLINE
   if(msg.type==="online_list"){
@@ -205,7 +211,13 @@ this.wsGlobal.onmessage = (e)=>{
   // TYPING
   if(msg.type==="typing"){
     if(msg.sender === this.user.email) return
-
+    if(!msg.room) return
+    const exists = this.chats.find(c=> {
+      const room = [this.user.email, c.friend_email]
+      .sort().join("_")
+      return room === msg.room
+    })
+    if(!exists) return
     this.typingUsers = {
       ...this.typingUsers,
       [msg.sender]: true
@@ -223,37 +235,63 @@ this.wsGlobal.onmessage = (e)=>{
   // MESSAGE
   if(msg.type==="message"){
 
-    const messageText = msg.text || "📎 File"
+  if(!msg.room) return
 
-    let friend = msg.sender === this.user.email
-      ? msg.room.split("_").find(x=>x!==this.user.email)
-      : msg.sender
+  const [u1,u2] = msg.room.split("_")
 
-    const chat = this.chats.find(c=>c.friend_email===friend)
+  // 🔥 pastikan message milik user ini
+  if(u1 !== this.user.email && u2 !== this.user.email) return
 
-    if(chat){
+  const messageText = msg.text || "📎 File"
 
-      chat.last_message = messageText
-      chat.updated_at = msg.created_at
+  const friend = msg.sender === this.user.email
+    ? msg.room.split("_").find(x=>x!==this.user.email)
+    : msg.sender
 
-      if(msg.sender !== this.user.email){
-        chat.unread = (chat.unread||0)+1
-        localStorage.setItem("unread_"+friend, chat.unread)
-      }
+  const chat = this.chats.find(c=>c.friend_email===friend)
 
-      this.chats = [...this.chats].sort(
-        (a,b)=> new Date(b.updated_at) - new Date(a.updated_at)
-      )
+  // 🔥 jika chat sudah ada
+  if(chat){
 
-    }else{
-      this.wsGlobal.send(JSON.stringify({
-        type:"init_chats",
-        user:this.user.email
-      }))
+    // anti duplicate
+    if(chat.updated_at === msg.created_at &&
+       chat.last_message === messageText) return
+
+    chat.last_message = messageText
+    chat.updated_at = msg.created_at
+
+    if(msg.sender !== this.user.email){
+      chat.unread = (chat.unread||0)+1
+      localStorage.setItem("unread_"+friend, chat.unread)
     }
 
-    return
+  } 
+  // 🔥 jika chat BELUM ADA → auto create
+  else {
+
+    this.chats.unshift({
+      room: msg.room,
+      friend_email: friend,
+      friend_name: friend,
+      last_message: messageText,
+      updated_at: msg.created_at,
+      unread: msg.sender !== this.user.email ? 1 : 0
+    })
+
+    // 🔥 subscribe room baru
+    this.wsGlobal.send(JSON.stringify({
+      type:"subscribe",
+      room: msg.room
+    }))
   }
+
+  // 🔥 sorting WA style
+  this.chats = [...this.chats].sort(
+    (a,b)=> new Date(b.updated_at) - new Date(a.updated_at)
+  )
+
+  return
+}
 
   // PROFILE UPDATE
   if(msg.type==="profile_update"){
@@ -271,6 +309,36 @@ this.wsGlobal.onmessage = (e)=>{
     const f = msg.room.split("_").find(x=>x!==this.user.email)
     this.chats = this.chats.filter(c=>c.friend_email!==f)
     localStorage.removeItem("unread_"+f)
+    return
+  }
+  
+  if(msg.type === "chat_update"){
+
+    if(!msg.room) return
+
+    const friend = msg.sender === this.user.email
+      ? msg.room.split("_").find(x=>x!==this.user.email)
+      : msg.sender
+
+    const chat = this.chats.find(c=>c.friend_email===friend)
+
+    if(chat){
+      chat.last_message = msg.text
+      chat.updated_at = msg.created_at
+    }
+
+    this.chats = [...this.chats].sort(
+      (a,b)=> new Date(b.updated_at) - new Date(a.updated_at)
+    )
+
+    return
+  }
+  
+  if(msg.type==="contact_update"){
+    this.wsGlobal.send(JSON.stringify({
+      type:"init_chats",
+      user:this.user.email
+    }))
     return
   }
 

@@ -25,7 +25,7 @@ body {background:#020617;color:white;}
 <!-- CONTENT -->
 <div class="flex-1 overflow-auto p-4">
 
-  <!-- CHATS -->
+  <!-- ===== CHATS ===== -->
   <div v-if="tab==='chats'">
 
     <div class="text-xl mb-3">Chats</div>
@@ -34,18 +34,15 @@ body {background:#020617;color:white;}
       placeholder="Search..."
       class="w-full p-2 rounded bg-white/10 mb-4">
 
-    <!-- 🔥 LOADING -->
     <div v-if="loadingChats" class="text-center mt-20 opacity-60">
       Loading chats...
     </div>
 
-    <!-- EMPTY -->
     <div v-else-if="filteredChats.length===0"
          class="text-center mt-20 opacity-60">
       No chats yet
     </div>
 
-    <!-- LIST -->
     <div v-for="c in filteredChats"
          @click="openChat(c)"
          class="p-3 mb-3 rounded-xl bg-white/5 cursor-pointer">
@@ -62,7 +59,7 @@ body {background:#020617;color:white;}
 
   </div>
 
-  <!-- CONTACTS -->
+  <!-- ===== CONTACTS ===== -->
   <div v-if="tab==='contacts'">
 
     <div class="text-xl mb-3">Contacts</div>
@@ -77,12 +74,46 @@ body {background:#020617;color:white;}
 
   </div>
 
+  <!-- ===== PROFILE ===== -->
+  <div v-if="tab==='profile'">
+
+    <div class="text-xl mb-4">Profile</div>
+
+    <div class="bg-white/5 p-4 rounded-xl">
+
+      <div class="flex justify-center mb-4">
+        <img :src="user.avatar || 'https://i.pravatar.cc/150'"
+             class="w-24 h-24 rounded-full">
+      </div>
+
+      <div class="mb-3">
+        <label class="text-sm opacity-60">Name</label>
+        <input v-model="user.name"
+          class="w-full p-2 mt-1 rounded bg-white/10">
+      </div>
+
+      <div class="mb-3">
+        <label class="text-sm opacity-60">Bio</label>
+        <textarea v-model="user.bio"
+          class="w-full p-2 mt-1 rounded bg-white/10"></textarea>
+      </div>
+
+      <button @click="saveProfile"
+        class="w-full py-2 mt-2 rounded bg-purple-600">
+        Save
+      </button>
+
+    </div>
+
+  </div>
+
 </div>
 
 <!-- NAV -->
 <div class="flex justify-around p-3 bg-white/5">
   <button @click="tab='chats'">💬</button>
   <button @click="tab='contacts'">👤</button>
+  <button @click="tab='profile'">⚙️</button>
 </div>
 
 </div>
@@ -103,7 +134,7 @@ tab:'chats',
 ws:null,
 wsRooms:{},
 
-loadingChats:true // 🔥 FIX
+loadingChats:true
 }
 },
 
@@ -123,7 +154,6 @@ mounted(){
 
 this.user = JSON.parse(localStorage.getItem("user"))
 
-// 🔥 RESET STATE
 this.chatMap = {}
 this.chats = []
 this.loadingChats = true
@@ -135,6 +165,11 @@ this.ws = new WebSocket(
 this.ws.onopen = ()=>{
 
   this.ws.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
+
+  this.ws.send(JSON.stringify({
     type:"init_chats",
     user:this.user.email
   }))
@@ -144,7 +179,7 @@ this.ws.onopen = ()=>{
     user:this.user.email
   }))
 
-  // 🔥 FIX DELAY
+  // anti race condition
   setTimeout(()=>{
     this.ws.send(JSON.stringify({
       type:"init_chats",
@@ -165,7 +200,6 @@ this.ws.onmessage = (e)=>{
       this.chatMap[c.friend_email] = c
     })
 
-    // 🔥 FORCE REACTIVE
     this.chatMap = { ...this.chatMap }
 
     this.chats = Object.values(this.chatMap)
@@ -185,6 +219,46 @@ this.ws.onmessage = (e)=>{
   if(msg.type === "message"){
     this.handleRealtimeMessage(msg)
   }
+
+  // ===== PROFILE REALTIME 🔥 =====
+  if(msg.type === "profile_update"){
+
+    const u = msg.user
+
+    // update contacts
+    this.contacts = this.contacts.map(c=>{
+      if(c.email === u.email){
+        return {...c, ...u}
+      }
+      return c
+    })
+
+    // update chats
+    this.chatMap = Object.fromEntries(
+      Object.entries(this.chatMap).map(([k,v])=>{
+        if(v.friend_email === u.email){
+          return [k,{
+            ...v,
+            friend_name: u.name,
+            friend_avatar: u.avatar
+          }]
+        }
+        return [k,v]
+      })
+    )
+
+    this.chatMap = { ...this.chatMap }
+
+    this.chats = Object.values(this.chatMap)
+      .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
+
+    // update self
+    if(u.email === this.user.email){
+      this.user = { ...this.user, ...u }
+      localStorage.setItem("user", JSON.stringify(this.user))
+    }
+  }
+
 }
 
 },
@@ -192,9 +266,7 @@ this.ws.onmessage = (e)=>{
 methods:{
 
 initRoomSockets(){
-
   this.chats.forEach(c=>{
-
     const room = [this.user.email, c.friend_email].sort().join("_")
 
     if(this.wsRooms[room]) return
@@ -205,7 +277,6 @@ initRoomSockets(){
 
     ws.onmessage = (e)=>{
       const msg = JSON.parse(e.data)
-
       if(msg.type === "message"){
         this.handleRealtimeMessage(msg)
       }
@@ -242,23 +313,33 @@ handleRealtimeMessage(msg){
 },
 
 openChat(c){
-
 localStorage.setItem("activeChat", JSON.stringify({
   email: c.friend_email,
   name: c.friend_name
 }))
-
 window.location.href="chat.html"
 },
 
 startChat(c){
-
 localStorage.setItem("activeChat", JSON.stringify({
   email: c.email,
   name: c.name
 }))
-
 window.location.href="chat.html"
+},
+
+// 🔥 SAVE PROFILE (REALTIME)
+saveProfile(){
+
+  localStorage.setItem("user", JSON.stringify(this.user))
+
+  this.ws.send(JSON.stringify({
+    type:"profile_update",
+    email:this.user.email,
+    name:this.user.name,
+    bio:this.user.bio,
+    avatar:this.user.avatar
+  }))
 }
 
 }

@@ -18,100 +18,141 @@ body {background:#020617;color:white;}
 
 <!-- HEADER -->
 <div class="p-4 bg-gradient-to-r from-purple-600 to-pink-500 rounded-b-2xl">
-  <h1 class="text-lg font-semibold">Hi, {{user.name}}</h1>
-  <p class="text-sm opacity-70">Welcome back</p>
+  <h1 class="text-lg font-semibold">
+    {{ activeChat ? activeChat.name : 'Hi, ' + user.name }}
+  </h1>
+  <p class="text-sm opacity-70">
+    {{ activeChat ? 'Chatting...' : 'Welcome back' }}
+  </p>
 </div>
 
 <!-- CONTENT -->
-<div class="flex-1 overflow-auto p-4">
+<div class="flex-1 overflow-hidden flex flex-col">
 
-  <!-- ===== CHATS ===== -->
-  <div v-if="tab==='chats'">
+  <!-- ===== CHAT WINDOW ===== -->
+  <div v-if="activeChat" class="flex flex-col flex-1">
 
-    <div class="text-xl mb-3">Chats</div>
-
-    <input v-model="search"
-      placeholder="Search..."
-      class="w-full p-2 rounded bg-white/10 mb-4">
-
-    <div v-if="loadingChats" class="text-center mt-20 opacity-60">
-      Loading chats...
+    <div class="p-2">
+      <button @click="closeChat">⬅ Back</button>
     </div>
 
-    <div v-else-if="filteredChats.length===0"
-         class="text-center mt-20 opacity-60">
-      No chats yet
-    </div>
+    <!-- messages -->
+    <div class="flex-1 overflow-auto p-3">
 
-    <div v-for="c in filteredChats"
-         @click="openChat(c)"
-         class="p-3 mb-3 rounded-xl bg-white/5 cursor-pointer">
+      <div v-for="m in messages"
+           class="mb-2"
+           :class="m.sender===user.email ? 'text-right' : ''">
 
-      <p class="font-semibold">
-        {{c.friend_name || c.friend_email}}
-      </p>
+        <div class="inline-block px-3 py-2 rounded bg-white/10">
+          {{m.text}}
+        </div>
 
-      <!-- 🔥 TYPING PRIORITY -->
-      <p class="text-sm"
-        :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-60'">
-
-        <span v-if="typingUsers[c.friend_email]">
-          sedang mengetik...
-        </span>
-
-        <span v-else>
-          {{c.last_message}}
-        </span>
-
-      </p>
-
-    </div>
-
-  </div>
-
-  <!-- ===== CONTACTS ===== -->
-  <div v-if="tab==='contacts'">
-
-    <div class="text-xl mb-3">Contacts</div>
-
-    <div v-for="c in contacts"
-         @click="startChat(c)"
-         class="p-3 mb-3 rounded-xl bg-white/5 cursor-pointer">
-
-      {{c.name}}
-
-    </div>
-
-  </div>
-
-  <!-- ===== PROFILE ===== -->
-  <div v-if="tab==='profile'">
-
-    <div class="text-xl mb-4">Profile</div>
-
-    <div class="bg-white/5 p-4 rounded-xl">
-
-      <div class="flex justify-center mb-4">
-        <img :src="user.avatar || 'https://i.pravatar.cc/150'"
-             class="w-24 h-24 rounded-full">
       </div>
 
-      <div class="mb-3">
-        <label class="text-sm opacity-60">Name</label>
+      <div v-if="typingUsers[activeChat.email]"
+           class="text-green-400 text-sm">
+        sedang mengetik...
+      </div>
+
+    </div>
+
+    <!-- input -->
+    <div class="p-3 flex gap-2">
+      <input v-model="messageInput"
+        @input="sendTyping"
+        class="flex-1 p-2 rounded bg-white/10"
+        placeholder="Type message...">
+
+      <button @click="sendMessage">Send</button>
+    </div>
+
+  </div>
+
+  <!-- ===== MAIN CONTENT ===== -->
+  <div v-else class="flex-1 overflow-auto p-4">
+
+    <!-- ===== CHATS ===== -->
+    <div v-if="tab==='chats'">
+
+      <div class="text-xl mb-3">Chats</div>
+
+      <input v-model="search"
+        placeholder="Search..."
+        class="w-full p-2 rounded bg-white/10 mb-4">
+
+      <div v-if="loadingChats" class="text-center mt-20 opacity-60">
+        Loading chats...
+      </div>
+
+      <div v-else-if="filteredChats.length===0"
+           class="text-center mt-20 opacity-60">
+        No chats yet
+      </div>
+
+      <div v-for="c in filteredChats"
+           @click="openChatInline(c)"
+           class="p-3 mb-3 rounded-xl bg-white/5 cursor-pointer">
+
+        <p class="font-semibold">
+          {{c.friend_name || c.friend_email}}
+        </p>
+
+        <p class="text-sm"
+          :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-60'">
+
+          <span v-if="typingUsers[c.friend_email]">
+            sedang mengetik...
+          </span>
+
+          <span v-else>
+            {{c.last_message}}
+          </span>
+
+        </p>
+
+      </div>
+
+    </div>
+
+    <!-- ===== CONTACTS ===== -->
+    <div v-if="tab==='contacts'">
+
+      <div class="text-xl mb-3">Contacts</div>
+
+      <div v-for="c in contacts"
+           @click="startChatInline(c)"
+           class="p-3 mb-3 rounded-xl bg-white/5 cursor-pointer">
+
+        {{c.name}}
+
+      </div>
+
+    </div>
+
+    <!-- ===== PROFILE ===== -->
+    <div v-if="tab==='profile'">
+
+      <div class="text-xl mb-4">Profile</div>
+
+      <div class="bg-white/5 p-4 rounded-xl">
+
+        <div class="flex justify-center mb-4">
+          <img :src="user.avatar || 'https://i.pravatar.cc/150'"
+               class="w-24 h-24 rounded-full">
+        </div>
+
         <input v-model="user.name"
-          class="w-full p-2 mt-1 rounded bg-white/10">
-      </div>
+          class="w-full p-2 mb-3 rounded bg-white/10">
 
-      <div class="mb-3">
-        <label class="text-sm opacity-60">Bio</label>
         <textarea v-model="user.bio"
-          class="w-full p-2 mt-1 rounded bg-white/10"></textarea>
-      </div>
+          class="w-full p-2 mb-3 rounded bg-white/10"></textarea>
 
-      <button @click="saveProfile"
-        class="w-full py-2 mt-2 rounded bg-purple-600">
-        Save
-      </button>
+        <button @click="saveProfile"
+          class="w-full py-2 rounded bg-purple-600">
+          Save
+        </button>
+
+      </div>
 
     </div>
 
@@ -120,7 +161,8 @@ body {background:#020617;color:white;}
 </div>
 
 <!-- NAV -->
-<div class="flex justify-around p-3 bg-white/5">
+<div v-if="!activeChat"
+     class="flex justify-around p-3 bg-white/5">
   <button @click="tab='chats'">💬</button>
   <button @click="tab='contacts'">👤</button>
   <button @click="tab='profile'">⚙️</button>
@@ -145,9 +187,12 @@ ws:null,
 wsRooms:{},
 
 loadingChats:true,
+typingUsers:{},
 
-// 🔥 typing state
-typingUsers:{}
+// 🔥 NEW
+activeChat:null,
+messages:[],
+messageInput:''
 }
 },
 
@@ -164,207 +209,147 @@ mounted(){
 
 this.user = JSON.parse(localStorage.getItem("user"))
 
-this.chatMap = {}
-this.chats = []
-this.loadingChats = true
-
 this.ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
 
 this.ws.onopen = ()=>{
-
-  this.ws.send(JSON.stringify({
-    type:"online",
-    user:this.user.email
-  }))
-
-  this.ws.send(JSON.stringify({
-    type:"init_chats",
-    user:this.user.email
-  }))
-
-  this.ws.send(JSON.stringify({
-    type:"init_contacts",
-    user:this.user.email
-  }))
-
-  setTimeout(()=>{
-    this.ws.send(JSON.stringify({
-      type:"init_chats",
-      user:this.user.email
-    }))
-  },500)
+  this.ws.send(JSON.stringify({type:"online",user:this.user.email}))
+  this.ws.send(JSON.stringify({type:"init_chats",user:this.user.email}))
+  this.ws.send(JSON.stringify({type:"init_contacts",user:this.user.email}))
 }
 
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // ===== INIT CHATS =====
-  if(msg.type === "init_chats"){
-
-    this.chatMap = {}
-
-    ;(msg.chats || []).forEach(c=>{
-      this.chatMap[c.friend_email] = c
-    })
-
-    this.chatMap = { ...this.chatMap }
-
-    this.chats = Object.values(this.chatMap)
-      .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
-
-    this.loadingChats = false
-
+  if(msg.type==="init_chats"){
+    this.chatMap={}
+    msg.chats.forEach(c=>this.chatMap[c.friend_email]=c)
+    this.chats=Object.values(this.chatMap)
     this.initRoomSockets()
+    this.loadingChats=false
   }
 
-  // ===== CONTACTS =====
-  if(msg.type === "init_contacts"){
-    this.contacts = msg.contacts || []
+  if(msg.type==="init_contacts"){
+    this.contacts=msg.contacts||[]
   }
 
-  // ===== 🔥 GLOBAL TYPING =====
-  if(msg.type === "typing"){
-    if(msg.sender !== this.user.email){
-
-      this.typingUsers = {
-        ...this.typingUsers,
-        [msg.sender]: true
-      }
-
-      setTimeout(()=>{
-        const t = {...this.typingUsers}
-        delete t[msg.sender]
-        this.typingUsers = t
-      },1500)
+  if(msg.type==="typing"){
+    if(msg.sender!==this.user.email){
+      this.typingUsers[msg.sender]=true
+      setTimeout(()=>delete this.typingUsers[msg.sender],1500)
     }
   }
-
-  // ===== PROFILE UPDATE =====
-  if(msg.type === "profile_update"){
-
-    const u = msg.user
-
-    this.contacts = this.contacts.map(c=>{
-      if(c.email === u.email){
-        return {...c, ...u}
-      }
-      return c
-    })
-
-    this.chatMap = Object.fromEntries(
-      Object.entries(this.chatMap).map(([k,v])=>{
-        if(v.friend_email === u.email){
-          return [k,{
-            ...v,
-            friend_name: u.name
-          }]
-        }
-        return [k,v]
-      })
-    )
-
-    this.chatMap = { ...this.chatMap }
-
-    this.chats = Object.values(this.chatMap)
-      .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
-
-    if(u.email === this.user.email){
-      this.user = { ...this.user, ...u }
-      localStorage.setItem("user", JSON.stringify(this.user))
-    }
-  }
-
 }
-
 },
 
 methods:{
 
 initRoomSockets(){
   this.chats.forEach(c=>{
-    const room = [this.user.email, c.friend_email].sort().join("_")
+    const room=[this.user.email,c.friend_email].sort().join("_")
 
     if(this.wsRooms[room]) return
 
-    const ws = new WebSocket(
+    const ws=new WebSocket(
       "wss://worker-chat.jihadwajib68.workers.dev/ws?room="+room
     )
 
-    ws.onmessage = (e)=>{
-      const msg = JSON.parse(e.data)
+    ws.onmessage=(e)=>{
+      const msg=JSON.parse(e.data)
 
-      if(msg.type === "message"){
+      if(msg.type==="message"){
         this.handleRealtimeMessage(msg)
+
+        if(this.activeChat && msg.room===this.getRoom(this.activeChat.email)){
+          this.messages.push(msg)
+        }
       }
 
-      // 🔥 ROOM TYPING
-      if(msg.type === "typing"){
-        if(msg.sender !== this.user.email){
+      if(msg.type==="typing"){
+        this.typingUsers[msg.sender]=true
+        setTimeout(()=>delete this.typingUsers[msg.sender],1500)
+      }
 
-          this.typingUsers = {
-            ...this.typingUsers,
-            [msg.sender]: true
-          }
-
-          setTimeout(()=>{
-            const t = {...this.typingUsers}
-            delete t[msg.sender]
-            this.typingUsers = t
-          },1500)
-        }
+      if(msg.type==="init_messages"){
+        this.messages=msg.messages
       }
     }
 
-    this.wsRooms[room] = ws
+    this.wsRooms[room]=ws
   })
 },
 
-handleRealtimeMessage(msg){
+getRoom(email){
+  return [this.user.email,email].sort().join("_")
+},
 
-  const friend = msg.sender === this.user.email
+openChatInline(c){
+  this.activeChat={
+    email:c.friend_email,
+    name:c.friend_name
+  }
+
+  const room=this.getRoom(c.friend_email)
+
+  this.wsRooms[room].send(JSON.stringify({
+    type:"init_messages",
+    room
+  }))
+},
+
+startChatInline(c){
+  this.openChatInline({
+    friend_email:c.email,
+    friend_name:c.name
+  })
+},
+
+closeChat(){
+  this.activeChat=null
+  this.messages=[]
+},
+
+sendMessage(){
+  const room=this.getRoom(this.activeChat.email)
+
+  this.wsRooms[room].send(JSON.stringify({
+    type:"message",
+    room,
+    sender:this.user.email,
+    text:this.messageInput
+  }))
+
+  this.messageInput=''
+},
+
+sendTyping(){
+  const room=this.getRoom(this.activeChat.email)
+
+  this.wsRooms[room].send(JSON.stringify({
+    type:"typing",
+    room,
+    sender:this.user.email
+  }))
+},
+
+handleRealtimeMessage(msg){
+  const friend=msg.sender===this.user.email
     ? msg.room.split("_").find(x=>x!==this.user.email)
     : msg.sender
 
-  let chat = this.chatMap[friend]
-
-  if(chat){
-    chat.last_message = msg.text
-    chat.updated_at = msg.created_at
-  }else{
-    this.chatMap[friend] = {
-      friend_email: friend,
-      friend_name: friend,
-      last_message: msg.text,
-      updated_at: msg.created_at
-    }
+  this.chatMap[friend]={
+    ...this.chatMap[friend],
+    friend_email:friend,
+    last_message:msg.text,
+    updated_at:msg.created_at
   }
 
-  this.chatMap = { ...this.chatMap }
-
-  this.chats = Object.values(this.chatMap)
-    .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
-},
-
-openChat(c){
-localStorage.setItem("activeChat", JSON.stringify({
-  email: c.friend_email,
-  name: c.friend_name
-}))
-window.location.href="chat.html"
-},
-
-startChat(c){
-localStorage.setItem("activeChat", JSON.stringify({
-  email: c.email,
-  name: c.name
-}))
-window.location.href="chat.html"
+  this.chats=Object.values(this.chatMap)
 },
 
 saveProfile(){
-  localStorage.setItem("user", JSON.stringify(this.user))
+  localStorage.setItem("user",JSON.stringify(this.user))
 
   this.ws.send(JSON.stringify({
     type:"profile_update",

@@ -13,23 +13,16 @@ body {
   color: white;
 }
 
-/* SEARCH */
 .search-bar {
   background: rgba(255,255,255,0.06);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,0.1);
 }
 
-/* CARD */
 .contact-card {
   background: rgba(255,255,255,0.04);
   backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,0.08);
-
-  box-shadow:
-    0 8px 25px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-
   transition: 0.25s;
 }
 
@@ -37,180 +30,98 @@ body {
   transform: translateY(-3px) scale(1.02);
 }
 
-/* ACTION BUTTON */
 .action-btn {
   background: rgba(255,255,255,0.06);
   padding: 8px;
   border-radius: 12px;
-  transition: 0.2s;
-}
-.action-btn:hover {
-  transform: scale(1.15);
-  background: rgba(255,255,255,0.15);
 }
 
-/* DELETE */
 .delete-btn:hover {
   background: rgba(255,0,0,0.2);
 }
 
-/* ONLINE DOT */
 .online-dot {
-  width:8px;
-  height:8px;
-  background:#22c55e;
-  border-radius:999px;
-  box-shadow:0 0 8px #22c55e;
+  width:8px;height:8px;background:#22c55e;border-radius:999px;
 }
 
-/* ADD BUTTON */
 .add-btn {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
 }
 
-/* TOAST */
 .toast {
   position: fixed;
   bottom: 90px;
   left: 50%;
-  transform: translateX(-50%) translateY(20px);
+  transform: translateX(-50%);
   background: rgba(20,20,30,0.9);
-  backdrop-filter: blur(20px);
   padding: 12px 20px;
   border-radius: 14px;
   opacity: 0;
   transition: 0.3s;
 }
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
+.toast.show { opacity:1; }
 </style>
-
 </head>
 
 <body>
 
 <div id="app" class="p-4">
 
-<!-- HEADER -->
-<div class="mb-4">
-  <h1 class="text-2xl font-semibold mb-3">Contacts</h1>
+<h1 class="text-2xl mb-3">Contacts</h1>
 
-  <button @click="showModal=true"
-    class="add-btn px-4 py-2 rounded-xl text-sm mb-4">
-    + Add Friend
-  </button>
+<button @click="showModal=true"
+  class="add-btn px-4 py-2 rounded-xl text-sm mb-4">
+  + Add Friend
+</button>
 
-  <div class="relative">
-    <span class="absolute left-4 top-1/2 -translate-y-1/2 opacity-50">🔍</span>
+<input v-model="search"
+  placeholder="Search..."
+  class="search-bar w-full p-3 rounded-full mb-4">
 
-    <input v-model="search"
-      placeholder="Search contacts..."
-      class="search-bar w-full pl-10 pr-4 py-3 rounded-full outline-none">
-  </div>
-</div>
-
-<!-- CONTACT LIST -->
+<!-- LIST -->
 <div v-for="c in filteredContacts"
      :key="c.email"
-     @click="startChat(c)"
-     class="contact-card p-4 mb-3 rounded-2xl flex items-center justify-between cursor-pointer">
+     class="contact-card p-4 mb-3 rounded-2xl flex justify-between">
 
-  <!-- LEFT -->
-  <div class="flex items-center gap-3">
+  <div @click="startChat(c)" class="flex gap-3 cursor-pointer">
 
-    <img :src="c.avatar || 'https://i.pravatar.cc/40'"
-      class="w-11 h-11 rounded-full object-cover">
+    <img :src="c.avatar || defaultAvatar"
+      class="w-10 h-10 rounded-full">
 
     <div>
-      <p class="font-semibold flex items-center gap-2">
+      <p class="font-semibold">
         {{c.name}}
-        <span v-if="isOnline(c.email)" class="online-dot"></span>
+        <span v-if="isOnline(c.email)" class="online-dot inline-block ml-1"></span>
       </p>
-
-      <p class="text-xs opacity-50 truncate max-w-[180px]">
-        {{ c.bio || 'Available' }}
-      </p>
+      <p class="text-xs opacity-50">{{c.bio || 'Available'}}</p>
     </div>
+
   </div>
 
-  <!-- ACTION -->
   <div class="flex gap-2">
-
     <button @click.stop="startChat(c)" class="action-btn">💬</button>
-
-    <button @click.stop="viewProfile(c)" class="action-btn">👁</button>
-    
     <button @click.stop="openDelete(c)" class="action-btn delete-btn">🗑</button>
-
   </div>
 
 </div>
 
-<!-- ADD FRIEND -->
-<div v-if="showModal"
-class="fixed inset-0 bg-black/70 flex items-center justify-center">
-
+<!-- ADD -->
+<div v-if="showModal" class="fixed inset-0 bg-black/70 flex items-center justify-center">
   <div class="bg-white/10 p-5 rounded-xl w-80">
-
     <h2 class="mb-3">Add Friend</h2>
 
     <input v-model="friendEmail"
-    class="p-3 w-full mb-3 bg-white/10 rounded">
+      class="p-3 w-full mb-3 bg-white/10 rounded">
 
     <div class="flex gap-2">
-      <button @click="sendRequest"
-      class="bg-purple-600 flex-1 p-2 rounded">
-      Send
+      <button @click="sendRequest" class="bg-purple-600 flex-1 p-2 rounded">
+        Send
       </button>
-
-      <button @click="showModal=false"
-      class="bg-gray-600 flex-1 p-2 rounded">
-      Close
-      </button>
-    </div>
-
-  </div>
-
-</div>
-
-<!-- PROFILE MODAL -->
-<div v-if="selectedProfile"
-class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-
-  <div class="bg-white/10 p-6 rounded-2xl w-80 text-center">
-
-    <img :src="selectedProfile.avatar || 'https://i.pravatar.cc/150'"
-      class="w-24 h-24 rounded-full mx-auto mb-3">
-
-    <h2 class="text-lg font-semibold">
-      {{selectedProfile.name}}
-    </h2>
-
-    <p class="text-sm mt-1"
-       :class="isOnline(selectedProfile.email) ? 'text-green-400' : 'opacity-50'">
-      {{ isOnline(selectedProfile.email) ? 'Online' : 'Offline' }}
-    </p>
-
-    <p class="text-sm opacity-60 mt-2">
-      {{selectedProfile.bio || 'No bio'}}
-    </p>
-
-    <div class="flex gap-2 mt-4">
-      <button @click="startChat(selectedProfile)"
-        class="bg-purple-600 flex-1 p-2 rounded-lg">
-        Chat
-      </button>
-
-      <button @click="selectedProfile=null"
-        class="bg-gray-600 flex-1 p-2 rounded-lg">
+      <button @click="showModal=false" class="bg-gray-600 flex-1 p-2 rounded">
         Close
       </button>
     </div>
-
   </div>
-
 </div>
 
 <!-- DELETE -->
@@ -218,21 +129,16 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
 class="fixed inset-0 bg-black/60 flex items-center justify-center">
 
   <div class="bg-white/10 p-5 rounded-xl w-72 text-center">
-
     <p class="mb-4">Delete {{selectedContact.name}}?</p>
 
     <div class="flex gap-2">
-      <button @click="deleteContact"
-        class="bg-red-500 flex-1 p-2 rounded">
+      <button @click="deleteContact" class="bg-red-500 flex-1 p-2 rounded">
         Delete
       </button>
-
-      <button @click="selectedContact=null"
-        class="bg-gray-600 flex-1 p-2 rounded">
+      <button @click="selectedContact=null" class="bg-gray-600 flex-1 p-2 rounded">
         Cancel
       </button>
     </div>
-
   </div>
 
 </div>
@@ -245,11 +151,7 @@ class="fixed inset-0 bg-black/60 flex items-center justify-center">
 </div>
 
 <script>
-const WS_URL="wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
-
-if(!localStorage.getItem("user")){
-  location.href="index.html"
-}
+const WS="wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 
 Vue.createApp({
 
@@ -260,12 +162,12 @@ contacts:[],
 search:'',
 friendEmail:'',
 showModal:false,
-onlineUsers:[],
-ws:null,
-selectedProfile:null,
 selectedContact:null,
+ws:null,
+onlineUsers:[],
 showToast:false,
-toastMessage:""
+toastMessage:"",
+defaultAvatar:"https://ui-avatars.com/api/?name=User"
 }
 },
 
@@ -279,35 +181,36 @@ return this.contacts.filter(c =>
 
 mounted(){
 
-// 🔥 CONNECT WS GLOBAL
-this.ws = new WebSocket(WS_URL)
+this.ws = new WebSocket(WS)
 
 this.ws.onopen = ()=>{
-
-  // ONLINE
   this.ws.send(JSON.stringify({
     type:"online",
     user:this.user.email
   }))
 
-  // 🔥 INIT CONTACTS (WAJIB)
   this.ws.send(JSON.stringify({
     type:"init_contacts",
     user:this.user.email
   }))
 }
 
-// 🔥 LISTENER
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // ================= CONTACTS =================
+  // INIT
   if(msg.type==="init_contacts"){
     this.contacts = msg.contacts || []
     return
   }
 
-  // 🔥 REALTIME UPDATE CONTACT
+  // ONLINE
+  if(msg.type==="online_list"){
+    this.onlineUsers = msg.users || []
+    return
+  }
+
+  // CONTACT UPDATE
   if(msg.type==="contact_update"){
     this.ws.send(JSON.stringify({
       type:"init_contacts",
@@ -315,40 +218,22 @@ this.ws.onmessage = (e)=>{
     }))
     return
   }
-  
-  // 🔥 PROFILE UPDATE
-if(msg.type === "profile_update"){
-  this.contacts = this.contacts.map(c => {
-    if(c.email === msg.user.email){
-      return {
-        ...c,
-        name: msg.user.name,
-        avatar: msg.user.avatar,
-        bio: msg.user.bio
+
+  // PROFILE UPDATE
+  if(msg.type==="profile_update"){
+    this.contacts = this.contacts.map(c=>{
+      if(c.email===msg.user.email){
+        return {...c,...msg.user}
       }
-    }
-    return c
-  })
-}
-
-// 🔥 FORCE REFRESH
-if(msg.type === "contact_update"){
-  this.ws.send(JSON.stringify({
-    type:"init_contacts",
-    user:this.user.email
-  }))
-}
-
-  // ================= ONLINE =================
-  if(msg.type==="online_list"){
-    this.onlineUsers = msg.users || []
+      return c
+    })
     return
   }
 
-  // 🔥 NOTIF FRIEND ACCEPT
-  if(msg.type==="friend_accepted"){
-    if(msg.to === this.user.email){
-      this.showToastMsg(msg.name + " menerima pertemanan 🎉")
+  // REQUEST ACCEPT
+  if(msg.type==="request_accepted"){
+    if(msg.to===this.user.email){
+      this.showToastMsg(msg.name+" menerima pertemanan 🎉")
     }
   }
 
@@ -359,77 +244,52 @@ if(msg.type === "contact_update"){
 methods:{
 
 showToastMsg(msg){
-  this.toastMessage = msg
-  this.showToast = true
-  setTimeout(()=> this.showToast=false,2000)
+  this.toastMessage=msg
+  this.showToast=true
+  setTimeout(()=>this.showToast=false,2000)
 },
 
-async sendRequest(){
+sendRequest(){
+  if(!this.friendEmail) return
 
-  const res = await fetch("https://worker-chat.jihadwajib68.workers.dev/send-request",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      from_email:this.user.email,
-      to_email:this.friendEmail
-    })
-  })
-
-  const result = await res.json()
-
-  if(result.error){
-    this.showToastMsg(result.error)
-    return
-  }
+  this.ws.send(JSON.stringify({
+    type:"send_request",
+    from_email:this.user.email,
+    to_email:this.friendEmail
+  }))
 
   this.showModal=false
   this.friendEmail=''
-  this.showToastMsg("Friend added ✅")
+  this.showToastMsg("Request sent 🚀")
 },
 
-startChat(c){
-  localStorage.setItem("activeChat", JSON.stringify({
-    email: c.email,
-    name: c.name,
-    avatar: c.avatar || null,
-    bio: c.bio || "",
-    last_seen: c.last_seen || null
+deleteContact(){
+
+  this.ws.send(JSON.stringify({
+    type:"delete_contact",
+    user_email:this.user.email,
+    friend_email:this.selectedContact.email
   }))
-  setTimeout(()=>{ window.top.location.href = "chat.html" },100)
-},
 
-async deleteContact(){
-  await fetch("https://worker-chat.jihadwajib68.workers.dev/delete-contact",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({
-      user_email:this.user.email,
-      friend_email:this.selectedContact.email
-    })
-  })
-  
-  // 🔥 FIX 1: langsung update UI (biar tidak nunggu WS)
   this.contacts = this.contacts.filter(c =>
     c.email !== this.selectedContact.email
   )
 
-   // 🔥 SAFE SEND WS
-  if(this.ws && this.ws.readyState === 1){
-    this.ws.send(JSON.stringify({
-      type:"contact_update"
-    }))
-  }
-
-  this.selectedContact = null
+  this.selectedContact=null
   this.showToastMsg("Contact deleted 🗑")
 },
 
-viewProfile(c){
-  this.selectedProfile = c
+startChat(c){
+  localStorage.setItem("activeChat", JSON.stringify({
+    email:c.email,
+    name:c.name,
+    avatar:c.avatar
+  }))
+  window.top.location.href="chat.html"
 },
 
 openDelete(c){
-  this.selectedContact = c
+  this.selectedContact=c
 },
 
 isOnline(email){

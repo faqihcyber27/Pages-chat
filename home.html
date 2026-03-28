@@ -325,11 +325,7 @@ const ws = new WebSocket(
 
 navigator.serviceWorker.register("/sw.js")
 .then(reg=>{
-  alert("SW REGISTERED ✅")
   initFCM()
-})
-.catch(err=>{
-  alert("SW ERROR ❌: " + err.message)
 })
 
 ws.onopen = ()=>{

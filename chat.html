@@ -132,13 +132,19 @@ this.ws.onopen = ()=>{
     user:this.user.email
   }))
 
-  // INIT CHAT HISTORY
+  // 🔥 WAJIB: SUBSCRIBE ROOM
+  this.ws.send(JSON.stringify({
+    type:"subscribe",
+    room:this.room
+  }))
+
+  // HISTORY
   this.ws.send(JSON.stringify({
     type:"init_messages",
     room:this.room
   }))
 
-  // READ STATUS
+  // READ
   this.ws.send(JSON.stringify({
     type:"read",
     room:this.room,
@@ -215,22 +221,40 @@ methods:{
 send(){
   if(!this.text.trim()) return
 
+  const temp = {
+    room:this.room,
+    sender:this.user.email,
+    text:this.text,
+    created_at: new Date().toISOString()
+  }
+
+  // 🔥 langsung tampil
+  this.messages.push(temp)
+  this.scrollBottom()
+
   this.ws.send(JSON.stringify({
     type:"message",
     room:this.room,
     sender:this.user.email,
     text:this.text
   }))
+
+  this.text=''
 },
 
 sendTyping(){
-  if(this.ws.readyState===1){
+
+  if(this.ws.readyState !== 1) return
+
+  clearTimeout(this._typingDebounce)
+
+  this._typingDebounce = setTimeout(()=>{
     this.ws.send(JSON.stringify({
       type:"typing",
       room:this.room,
       sender:this.user.email
     }))
-  }
+  }, 200)
 },
 
 formatTime(t){
@@ -246,7 +270,7 @@ scrollBottom(force=false){
     if(!el) return
 
     const nearBottom =
-      el.scrollHeight - el.scrollTop - el.clientHeight < 100
+      el.scrollHeight - el.scrollTop - el.clientHeight < 150
 
     if(nearBottom || force){
       el.scrollTop = el.scrollHeight

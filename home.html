@@ -11,15 +11,23 @@
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-body {background:#020617;color:white;}
+body {
+  background: radial-gradient(circle at top, #0f172a, #020617);
+  color: white;
+}
+
+.header {
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-radius: 0 0 24px 24px;
+}
 
 .chat-card {
   background: rgba(255,255,255,0.05);
   backdrop-filter: blur(18px);
   border: 1px solid rgba(255,255,255,0.08);
-  transition: 0.3s;
+  transition: 0.2s;
 }
-.chat-card:hover {transform: scale(1.02);}
+.chat-card:active { transform: scale(0.97); }
 
 .navbar {
   position: fixed;
@@ -40,14 +48,19 @@ body {background:#020617;color:white;}
 <div id="app" class="h-screen flex flex-col">
 
 <!-- HEADER -->
-<div class="p-4 bg-gradient-to-r from-purple-600 to-indigo-600">
-  <h1 class="text-lg font-semibold">Hi, {{user.name}}</h1>
+<div class="header p-4 mx-2 mt-2 flex items-center gap-3">
+  <img :src="user.avatar || 'https://ui-avatars.com/api/?name='+user.name"
+       class="w-11 h-11 rounded-full">
+  <div>
+    <h1 class="font-semibold">Hi, {{user.name}}</h1>
+    <p class="text-xs opacity-70">Realtime Chat</p>
+  </div>
 </div>
 
 <!-- CONTENT -->
 <div class="flex-1 overflow-auto">
 
-  <!-- ================= CHATS ================= -->
+  <!-- CHATS -->
   <div v-if="tab==='chats'">
 
     <div class="px-4 mt-4 text-xl font-semibold">Chats</div>
@@ -64,66 +77,80 @@ body {background:#020617;color:white;}
 
       <div v-for="c in pinnedChats"
            @click="openChat(c)"
-           class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer border border-yellow-400/20">
+           class="chat-card p-4 mb-3 rounded-2xl flex justify-between items-center border border-yellow-400/20">
 
         <div class="flex items-center gap-3">
 
           <img v-if="c.friend_avatar"
             :src="c.friend_avatar"
-            class="w-10 h-10 rounded-full">
+            class="w-11 h-11 rounded-full object-cover">
 
           <div v-else
             :style="{ background: getColor(getName(c)) }"
-            class="w-10 h-10 rounded-full flex items-center justify-center">
+            class="w-11 h-11 rounded-full flex items-center justify-center font-bold">
             {{ getInitial(getName(c)) }}
           </div>
 
           <div>
-            <p class="font-semibold">
+            <p class="font-semibold flex items-center gap-2">
               {{ getName(c) }}
-              <span v-if="isOnline(c.friend_email)" class="text-green-400">●</span>
+              <span v-if="isOnline(c.friend_email)"
+                class="w-2 h-2 bg-green-400 rounded-full"></span>
+              <span class="text-yellow-400 text-xs">📌</span>
             </p>
 
             <p class="text-sm">
               <span v-if="typingUsers[c.friend_email]" class="text-green-400">
                 sedang mengetik...
               </span>
-              <span v-else>{{c.last_message}}</span>
+              <span v-else class="opacity-60">
+                {{c.last_message}}
+              </span>
             </p>
           </div>
 
         </div>
 
-        <div>
-          <button @click.stop="togglePin(c)">⭐</button>
+        <div class="text-right">
+          <p class="text-xs opacity-50">
+            {{formatTime(c.updated_at)}}
+          </p>
+
+          <button @click.stop="togglePin(c)" class="text-yellow-400">⭐</button>
+
+          <div v-if="c.unread>0"
+            class="bg-red-500 text-xs px-2 rounded-full mt-1">
+            {{c.unread}}
+          </div>
         </div>
 
       </div>
     </div>
 
     <!-- LIST -->
-    <div class="px-4 mt-4">
+    <div class="px-4 mt-2 pb-20">
 
       <div v-for="c in normalChats"
            @click="openChat(c)"
-           class="chat-card p-4 mb-3 flex justify-between cursor-pointer">
+           class="chat-card p-4 mb-3 rounded-2xl flex justify-between items-center">
 
         <div class="flex items-center gap-3">
 
           <img v-if="c.friend_avatar"
             :src="c.friend_avatar"
-            class="w-10 h-10 rounded-full">
+            class="w-11 h-11 rounded-full object-cover">
 
           <div v-else
             :style="{ background: getColor(getName(c)) }"
-            class="w-10 h-10 rounded-full flex items-center justify-center">
+            class="w-11 h-11 rounded-full flex items-center justify-center font-bold">
             {{ getInitial(getName(c)) }}
           </div>
 
           <div>
-            <p class="font-semibold">
+            <p class="font-semibold flex items-center gap-2">
               {{ getName(c) }}
-              <span v-if="isOnline(c.friend_email)" class="text-green-400">●</span>
+              <span v-if="isOnline(c.friend_email)"
+                class="w-2 h-2 bg-green-400 rounded-full"></span>
             </p>
 
             <p class="text-sm"
@@ -143,10 +170,19 @@ body {background:#020617;color:white;}
         </div>
 
         <div class="text-right">
-          <span v-if="c.unread>0"
-            class="bg-red-500 px-2 rounded-full text-xs">
+          <p class="text-xs opacity-50">
+            {{formatTime(c.updated_at)}}
+          </p>
+
+          <button @click.stop="togglePin(c)"
+            :class="pinned.includes(c.friend_email)?'text-yellow-400':'opacity-40'">
+            ⭐
+          </button>
+
+          <div v-if="c.unread>0"
+            class="bg-red-500 text-xs px-2 rounded-full mt-1">
             {{c.unread}}
-          </span>
+          </div>
         </div>
 
       </div>
@@ -155,26 +191,9 @@ body {background:#020617;color:white;}
 
   </div>
 
-  <!-- ================= CONTACTS ================= -->
-  <div v-if="tab==='contacts'" class="p-4">
-    <h2 class="text-xl mb-3">Contacts</h2>
-    <div v-for="c in contacts" class="chat-card mb-2 p-3">
-      {{c.name}}
-    </div>
-  </div>
-
-  <!-- ================= PROFILE ================= -->
-  <div v-if="tab==='profile'" class="p-4">
-    <h2 class="text-xl mb-3">Profile</h2>
-    <input v-model="user.name" class="w-full p-2 bg-white/10 rounded mb-2">
-    <button @click="saveProfile" class="bg-purple-600 p-2 rounded w-full">
-      Save
-    </button>
-  </div>
-
 </div>
 
-<!-- NAVBAR -->
+<!-- NAV -->
 <div class="navbar flex justify-around text-xl">
   <button @click="tab='chats'">💬</button>
   <button @click="tab='contacts'">👤</button>
@@ -196,7 +215,6 @@ tab:'chats',
 chats:[],
 chatMap:{},
 
-contacts:[],
 onlineUsers:[],
 typingUsers:{},
 
@@ -235,10 +253,8 @@ this.wsGlobal.onopen = ()=>{
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // INIT (MERGE)
   if(msg.type==="init_chats"){
-
-    ;(msg.chats || []).forEach(c=>{
+    (msg.chats||[]).forEach(c=>{
       this.chatMap[c.friend_email] = {
         ...this.chatMap[c.friend_email],
         ...c,
@@ -260,7 +276,6 @@ this.wsGlobal.onmessage = (e)=>{
 methods:{
 
 syncChats(){
-
   let arr = Object.values(this.chatMap)
 
   arr.sort((a,b)=>{
@@ -277,41 +292,23 @@ syncChats(){
 },
 
 initRoomSockets(){
-
 this.chats.forEach(c=>{
-
 const room = [this.user.email,c.friend_email].sort().join("_")
 
 if(this.wsRooms[room]) return
 
-const ws = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room="+room
-)
+const ws = new WebSocket(WS_URL.replace("global", room))
 
 ws.onmessage = (e)=>{
 const msg = JSON.parse(e.data)
 
-// typing
 if(msg.type==="typing"){
   if(msg.sender===this.user.email) return
-
-  this.typingUsers = {
-    ...this.typingUsers,
-    [msg.sender]: true
-  }
-
-  setTimeout(()=>{
-    const t = {...this.typingUsers}
-    delete t[msg.sender]
-    this.typingUsers = t
-  },1000)
+  this.typingUsers = {...this.typingUsers,[msg.sender]:true}
+  setTimeout(()=>delete this.typingUsers[msg.sender],1000)
 }
 
-// message realtime
 if(msg.type==="message"){
-
-  const messageText = msg.text || "📎 File"
-
   const friend = msg.sender === this.user.email
     ? msg.room.split("_").find(x=>x!==this.user.email)
     : msg.sender
@@ -319,24 +316,12 @@ if(msg.type==="message"){
   let chat = this.chatMap[friend]
 
   if(chat){
-
-    chat.last_message = messageText
+    chat.last_message = msg.text
     chat.updated_at = msg.created_at
 
     if(msg.sender !== this.user.email){
-      chat.unread = (chat.unread || 0) + 1
+      chat.unread = (chat.unread||0)+1
     }
-
-  }else{
-
-    this.chatMap[friend] = {
-      friend_email: friend,
-      friend_name: friend,
-      last_message: messageText,
-      updated_at: msg.created_at,
-      unread: msg.sender !== this.user.email ? 1 : 0
-    }
-
   }
 
   this.syncChats()
@@ -345,30 +330,20 @@ if(msg.type==="message"){
 }
 
 this.wsRooms[room]=ws
-
 })
-
 },
 
 togglePin(c){
   const i = this.pinned.indexOf(c.friend_email)
-
-  if(i>-1){
-    this.pinned.splice(i,1)
-  }else{
-    this.pinned.push(c.friend_email)
-  }
+  if(i>-1) this.pinned.splice(i,1)
+  else this.pinned.push(c.friend_email)
 
   localStorage.setItem("pinned", JSON.stringify(this.pinned))
-
   this.syncChats()
 },
 
 openChat(c){
-  localStorage.setItem("activeChat", JSON.stringify({
-    email:c.friend_email,
-    name:c.friend_name
-  }))
+  localStorage.setItem("activeChat", JSON.stringify(c))
   window.location.href="chat.html"
 },
 
@@ -382,6 +357,13 @@ return colors[n.length % colors.length]
 
 isOnline(email){
   return this.onlineUsers.includes(email)
+},
+
+formatTime(t){
+if(!t) return ''
+const d=new Date(t)
+return d.getHours().toString().padStart(2,'0')+':'+
+d.getMinutes().toString().padStart(2,'0')
 }
 
 }

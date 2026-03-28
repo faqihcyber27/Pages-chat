@@ -74,7 +74,7 @@ body {background:#020617;color:white;}
 
     <div class="text-xl mb-3">Contacts</div>
 
-    <div v-for="c in filteredContacts"
+    <div v-for="c in contacts"
          @click="startChat(c)"
          class="p-3 mb-3 rounded-xl bg-white/5 cursor-pointer">
 
@@ -146,7 +146,7 @@ wsRooms:{},
 
 loadingChats:true,
 
-// 🔥 NEW
+// 🔥 typing state
 typingUsers:{}
 }
 },
@@ -157,9 +157,6 @@ filteredChats(){
     const name = (c.friend_name || c.friend_email).toLowerCase()
     return name.includes(this.search.toLowerCase())
   })
-},
-filteredContacts(){
-  return this.contacts
 }
 },
 
@@ -205,6 +202,7 @@ this.ws.onmessage = (e)=>{
 
   // ===== INIT CHATS =====
   if(msg.type === "init_chats"){
+
     this.chatMap = {}
 
     ;(msg.chats || []).forEach(c=>{
@@ -226,7 +224,7 @@ this.ws.onmessage = (e)=>{
     this.contacts = msg.contacts || []
   }
 
-  // ===== GLOBAL TYPING 🔥 =====
+  // ===== 🔥 GLOBAL TYPING =====
   if(msg.type === "typing"){
     if(msg.sender !== this.user.email){
 
@@ -260,8 +258,7 @@ this.ws.onmessage = (e)=>{
         if(v.friend_email === u.email){
           return [k,{
             ...v,
-            friend_name: u.name,
-            friend_avatar: u.avatar
+            friend_name: u.name
           }]
         }
         return [k,v]

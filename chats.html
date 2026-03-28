@@ -66,21 +66,14 @@ body {background:#020617;color:white;}
           <span v-if="typingUsers[c.friend_email]" class="text-green-400">
             sedang mengetik...
           </span>
-          <span v-else-if="c.last_message">
-            {{c.last_message}}
-          </span>
-          <span v-else>No message</span>
+          <span v-else>{{c.last_message || 'No message'}}</span>
         </p>
       </div>
     </div>
 
     <div class="text-right">
-      <p class="text-xs opacity-50">
-        {{formatTime(c.updated_at)}}
-      </p>
-
-      <button @click.stop="togglePin(c)"
-        class="text-yellow-400">⭐</button>
+      <p class="text-xs opacity-50">{{formatTime(c.updated_at)}}</p>
+      <button @click.stop="togglePin(c)" class="text-yellow-400">⭐</button>
 
       <div v-if="c.unread>0"
         class="bg-red-500 text-xs px-2 rounded-full mt-1">
@@ -124,20 +117,14 @@ body {background:#020617;color:white;}
             sedang mengetik...
           </span>
 
-          <span v-else-if="c.last_message">
-            {{c.last_message}}
-          </span>
-
-          <span v-else>No message</span>
+          <span v-else>{{c.last_message || 'No message'}}</span>
 
         </p>
       </div>
     </div>
 
     <div class="text-right">
-      <p class="text-xs opacity-50">
-        {{formatTime(c.updated_at)}}
-      </p>
+      <p class="text-xs opacity-50">{{formatTime(c.updated_at)}}</p>
 
       <button @click.stop="togglePin(c)"
         :class="isPinned(c.friend_email)?'text-yellow-400':'opacity-40'">
@@ -168,7 +155,6 @@ chats:[],
 onlineUsers:[],
 typingUsers:{},
 wsGlobal:null,
-wsRooms:{},
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
 }
 },
@@ -184,35 +170,29 @@ normalChats(){
 
 mounted(){
 
-// 🔥 CONNECT WS
 this.wsGlobal = new WebSocket(WS_URL)
 
 this.wsGlobal.onopen = ()=>{
-
-  // ONLINE
   this.wsGlobal.send(JSON.stringify({
     type:"online",
     user:this.user.email
   }))
 
-  // 🔥 INIT CHATS (WAJIB)
   this.wsGlobal.send(JSON.stringify({
     type:"init_chats",
     user:this.user.email
   }))
 }
 
-// 🔥 LISTENER
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // INIT CHATS
+  // INIT
   if(msg.type === "init_chats"){
-    console.log("INIT CHATS:", msg.chats)
-    this.chats = [...(msg.chats || [])]
-    this.$nextTick(()=>{
-      this.initRoomSockets()
-    })
+    this.chats = (msg.chats || []).map(c=>({
+      ...c,
+      unread: Number(localStorage.getItem("unread_"+c.friend_email)) || 0
+    }))
     return
   }
 
@@ -222,37 +202,50 @@ this.wsGlobal.onmessage = (e)=>{
     return
   }
 
-  // MESSAGE REALTIME
-  if(msg.type==="message"){
-    const messageText = msg.text || "📎 File"
-    let friend
+  // TYPING
+  if(msg.type==="typing"){
+    if(msg.sender === this.user.email) return
 
-    if(msg.sender === this.user.email){
-      const parts = msg.room.split("_")
-      friend = parts.find(x=>x!==this.user.email)
-    }else{
-      friend = msg.sender
+    this.typingUsers = {
+      ...this.typingUsers,
+      [msg.sender]: true
     }
+
+    setTimeout(()=>{
+      const t = {...this.typingUsers}
+      delete t[msg.sender]
+      this.typingUsers = t
+    },1000)
+
+    return
+  }
+
+  // MESSAGE
+  if(msg.type==="message"){
+
+    const messageText = msg.text || "📎 File"
+
+    let friend = msg.sender === this.user.email
+      ? msg.room.split("_").find(x=>x!==this.user.email)
+      : msg.sender
 
     const chat = this.chats.find(c=>c.friend_email===friend)
 
     if(chat){
-      if(
-        chat.last_message === messageText &&
-        Math.abs(new Date(chat.updated_at) - new Date(msg.created_at)) < 1000
-      ){
-        return
-      }
+
       chat.last_message = messageText
       chat.updated_at = msg.created_at
 
-      this.chats = [
-        chat,
-        ...this.chats.filter(x=>x.friend_email!==friend)
-      ]
+      if(msg.sender !== this.user.email){
+        chat.unread = (chat.unread||0)+1
+        localStorage.setItem("unread_"+friend, chat.unread)
+      }
+
+      this.chats = [...this.chats].sort(
+        (a,b)=> new Date(b.updated_at) - new Date(a.updated_at)
+      )
 
     }else{
-      // 🔥 fallback reload via WS
       this.wsGlobal.send(JSON.stringify({
         type:"init_chats",
         user:this.user.email
@@ -261,166 +254,48 @@ this.wsGlobal.onmessage = (e)=>{
 
     return
   }
-  
+
   // PROFILE UPDATE
-if(msg.type === "profile_update"){
-  this.chats = this.chats.map(c => {
-    if(c.friend_email === msg.user.email){
-      return {
-        ...c,
-        friend_name: msg.user.name,
-        friend_avatar: msg.user.avatar
+  if(msg.type==="profile_update"){
+    this.chats = this.chats.map(c=>{
+      if(c.friend_email===msg.user.email){
+        return {...c, ...msg.user}
       }
-    }
-    return c
-  })
-}
-
-// REFRESH CHAT LIST
-if(msg.type === "chat_update"){
-  this.wsGlobal.send(JSON.stringify({
-    type:"init_chats",
-    user:this.user.email
-  }))
-}
-
-  // READ
-  if(msg.type==="read"){
-    const chat = this.chats.find(x=>x.friend_email===msg.user)
-    if(chat) chat.unread=0
-  }
-}
-
-// 🔥 INIT FCM
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "chat-realtime-7b092.firebaseapp.com",
-  projectId: "chat-realtime-7b092",
-  messagingSenderId: "424831780632",
-  appId: "1:424831780632:web:6e42d806ea94392778406d"
-}
-
-if (!firebase.apps.length) {
-  firebase.initializeApp(firebaseConfig)
-}
-
-const messaging = firebase.messaging()
-
-navigator.serviceWorker.register("/sw.js").then(async (reg)=>{
-
-  const permission = await Notification.requestPermission()
-  console.log("PERMISSION:", permission)
-
-  if(permission !== "granted") return
-
-  const token = await messaging.getToken({
-    vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0",
-    serviceWorkerRegistration: reg
-  })
-
-  if(!token){
-    console.log("TOKEN NULL")
+      return c
+    })
     return
   }
 
-  console.log("TOKEN:", token)
-
-  await fetch("https://worker-chat.jihadwajib68.workers.dev/save-token", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      token,
-      email: this.user.email
-    })
-  })
-
-})
-
-messaging.onMessage((payload)=>{
-  console.log("NOTIF MASUK:", payload)
-
-  if(Notification.permission === "granted"){
-    new Notification(payload.notification.title, {
-      body: payload.notification.body
-    })
+  // DELETE CHAT
+  if(msg.type==="chat_deleted"){
+    const f = msg.room.split("_").find(x=>x!==this.user.email)
+    this.chats = this.chats.filter(c=>c.friend_email!==f)
+    localStorage.removeItem("unread_"+f)
+    return
   }
-})
+
+  // READ
+  if(msg.type==="read_update"){
+    const f = msg.room.split("_").find(x=>x!==this.user.email)
+    const chat = this.chats.find(c=>c.friend_email===f)
+    if(chat){
+      chat.unread = 0
+      localStorage.removeItem("unread_"+f)
+    }
+    return
+  }
+
+}
 
 },
 
 methods:{
 
-initRoomSockets(){
-
-this.chats.forEach(c=>{
-
-const room = [this.user.email,c.friend_email].sort().join("_")
-
-if(this.wsRooms[room]) return
-
-const ws = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room="+room
-)
-
-ws.onmessage = (e)=>{
-const msg = JSON.parse(e.data)
-
-// typing
-if(msg.type==="typing"){
-  if(msg.sender===this.user.email) return
-  this.typingUsers = {...this.typingUsers,[msg.sender]:true}
-  setTimeout(()=>{
-    const t = {...this.typingUsers}
-    delete t[msg.sender]
-    this.typingUsers = t
-  },1000)
-}
-
-// message
-if(msg.type==="message"){
-  const messageText = msg.text || "📎 File"
-  let friend = msg.sender === this.user.email
-    ? msg.room.split("_").find(x=>x!==this.user.email)
-    : msg.sender
-
-  const chat = this.chats.find(x=>x.friend_email===friend)
-
-  if(chat){
-    if(
-      chat.last_message === messageText &&
-      Math.abs(new Date(chat.updated_at) - new Date(msg.created_at)) < 1000
-    ){
-      return
-    }
-    chat.last_message = messageText
-    chat.updated_at = msg.created_at
-
-    if(msg.sender !== this.user.email){
-      chat.unread = (chat.unread||0)+1
-    }
-
-    this.chats = [
-      chat,
-      ...this.chats.filter(x=>x.friend_email!==friend)
-    ]
-  }
-}
-
-}
-
-this.wsRooms[room]=ws
-
-})
-
-},
-
 togglePin(c){
   const i = this.pinned.indexOf(c.friend_email)
-  if(i>-1){
-    this.pinned.splice(i,1)
-  }else{
-    this.pinned.push(c.friend_email)
-  }
+  if(i>-1) this.pinned.splice(i,1)
+  else this.pinned.push(c.friend_email)
+
   localStorage.setItem("pinned", JSON.stringify(this.pinned))
 },
 
@@ -429,14 +304,15 @@ isPinned(email){
 },
 
 openChat(c){
-localStorage.setItem("activeChat", JSON.stringify({
-  email:c.friend_email,
-  name:c.friend_name,
-  avatar:c.friend_avatar,
-  bio:c.friend_bio,
-  last_seen:c.friend_last_seen
-}))
-parent.location.href="chat.html"
+  localStorage.removeItem("unread_"+c.friend_email)
+
+  localStorage.setItem("activeChat", JSON.stringify({
+    email:c.friend_email,
+    name:c.friend_name,
+    avatar:c.friend_avatar
+  }))
+
+  parent.location.href="chat.html"
 },
 
 getName(c){ return c.friend_name || c.friend_email },

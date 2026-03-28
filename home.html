@@ -51,8 +51,18 @@ body {background:#020617;color:white;}
         {{c.friend_name || c.friend_email}}
       </p>
 
-      <p class="text-sm opacity-60">
-        {{c.last_message}}
+      <!-- 🔥 TYPING PRIORITY -->
+      <p class="text-sm"
+        :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-60'">
+
+        <span v-if="typingUsers[c.friend_email]">
+          sedang mengetik...
+        </span>
+
+        <span v-else>
+          {{c.last_message}}
+        </span>
+
       </p>
 
     </div>
@@ -134,7 +144,10 @@ tab:'chats',
 ws:null,
 wsRooms:{},
 
-loadingChats:true
+loadingChats:true,
+
+// 🔥 NEW
+typingUsers:{}
 }
 },
 
@@ -179,7 +192,6 @@ this.ws.onopen = ()=>{
     user:this.user.email
   }))
 
-  // anti race condition
   setTimeout(()=>{
     this.ws.send(JSON.stringify({
       type:"init_chats",
@@ -193,7 +205,6 @@ this.ws.onmessage = (e)=>{
 
   // ===== INIT CHATS =====
   if(msg.type === "init_chats"){
-
     this.chatMap = {}
 
     ;(msg.chats || []).forEach(c=>{
@@ -215,17 +226,28 @@ this.ws.onmessage = (e)=>{
     this.contacts = msg.contacts || []
   }
 
-  // ===== REALTIME MESSAGE =====
-  if(msg.type === "message"){
-    this.handleRealtimeMessage(msg)
+  // ===== GLOBAL TYPING 🔥 =====
+  if(msg.type === "typing"){
+    if(msg.sender !== this.user.email){
+
+      this.typingUsers = {
+        ...this.typingUsers,
+        [msg.sender]: true
+      }
+
+      setTimeout(()=>{
+        const t = {...this.typingUsers}
+        delete t[msg.sender]
+        this.typingUsers = t
+      },1500)
+    }
   }
 
-  // ===== PROFILE REALTIME 🔥 =====
+  // ===== PROFILE UPDATE =====
   if(msg.type === "profile_update"){
 
     const u = msg.user
 
-    // update contacts
     this.contacts = this.contacts.map(c=>{
       if(c.email === u.email){
         return {...c, ...u}
@@ -233,7 +255,6 @@ this.ws.onmessage = (e)=>{
       return c
     })
 
-    // update chats
     this.chatMap = Object.fromEntries(
       Object.entries(this.chatMap).map(([k,v])=>{
         if(v.friend_email === u.email){
@@ -252,7 +273,6 @@ this.ws.onmessage = (e)=>{
     this.chats = Object.values(this.chatMap)
       .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
 
-    // update self
     if(u.email === this.user.email){
       this.user = { ...this.user, ...u }
       localStorage.setItem("user", JSON.stringify(this.user))
@@ -277,8 +297,26 @@ initRoomSockets(){
 
     ws.onmessage = (e)=>{
       const msg = JSON.parse(e.data)
+
       if(msg.type === "message"){
         this.handleRealtimeMessage(msg)
+      }
+
+      // 🔥 ROOM TYPING
+      if(msg.type === "typing"){
+        if(msg.sender !== this.user.email){
+
+          this.typingUsers = {
+            ...this.typingUsers,
+            [msg.sender]: true
+          }
+
+          setTimeout(()=>{
+            const t = {...this.typingUsers}
+            delete t[msg.sender]
+            this.typingUsers = t
+          },1500)
+        }
       }
     }
 
@@ -328,9 +366,7 @@ localStorage.setItem("activeChat", JSON.stringify({
 window.location.href="chat.html"
 },
 
-// 🔥 SAVE PROFILE (REALTIME)
 saveProfile(){
-
   localStorage.setItem("user", JSON.stringify(this.user))
 
   this.ws.send(JSON.stringify({

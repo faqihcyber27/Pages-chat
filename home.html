@@ -169,11 +169,15 @@ user: JSON.parse(localStorage.getItem("user")),
 tab:'chats',
 
 chats:[],
+chatMap:{}, // 🔥 NEW
+
 contacts:[],
 onlineUsers:[],
 typingUsers:{},
+
 wsGlobal:null,
 wsRooms:{},
+
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
 }
 },
@@ -206,8 +210,18 @@ this.wsGlobal.onopen = ()=>{
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
+  // 🔥 INIT (MERGE, BUKAN REPLACE)
   if(msg.type==="init_chats"){
-    this.chats = msg.chats || []
+
+    ;(msg.chats || []).forEach(c=>{
+      this.chatMap[c.friend_email] = {
+        ...this.chatMap[c.friend_email],
+        ...c,
+        unread: this.chatMap[c.friend_email]?.unread || 0
+      }
+    })
+
+    this.syncChats()
     this.$nextTick(()=>this.initRoomSockets())
   }
 
@@ -220,8 +234,28 @@ this.wsGlobal.onmessage = (e)=>{
 
 methods:{
 
+// 🔥 CORE SYNC
+syncChats(){
+
+  let arr = Object.values(this.chatMap)
+
+  arr.sort((a,b)=>{
+    const aPinned = this.pinned.includes(a.friend_email)
+    const bPinned = this.pinned.includes(b.friend_email)
+
+    if(aPinned && !bPinned) return -1
+    if(!aPinned && bPinned) return 1
+
+    return new Date(b.updated_at) - new Date(a.updated_at)
+  })
+
+  this.chats = arr
+},
+
 initRoomSockets(){
+
 this.chats.forEach(c=>{
+
 const room = [this.user.email,c.friend_email].sort().join("_")
 
 if(this.wsRooms[room]) return
@@ -233,30 +267,77 @@ const ws = new WebSocket(
 ws.onmessage = (e)=>{
 const msg = JSON.parse(e.data)
 
+// 🔥 TYPING
 if(msg.type==="typing"){
-  this.typingUsers = {...this.typingUsers,[msg.sender]:true}
-  setTimeout(()=>delete this.typingUsers[msg.sender],1000)
+  if(msg.sender===this.user.email) return
+
+  this.typingUsers = {
+    ...this.typingUsers,
+    [msg.sender]: true
+  }
+
+  setTimeout(()=>{
+    const t = {...this.typingUsers}
+    delete t[msg.sender]
+    this.typingUsers = t
+  },1000)
 }
 
+// 🔥 MESSAGE REALTIME (NO RELOAD)
 if(msg.type==="message"){
-  this.wsGlobal.send(JSON.stringify({
-    type:"init_chats",
-    user:this.user.email
-  }))
+
+  const messageText = msg.text || "📎 File"
+
+  const friend = msg.sender === this.user.email
+    ? msg.room.split("_").find(x=>x!==this.user.email)
+    : msg.sender
+
+  let chat = this.chatMap[friend]
+
+  if(chat){
+
+    chat.last_message = messageText
+    chat.updated_at = msg.created_at
+
+    if(msg.sender !== this.user.email){
+      chat.unread = (chat.unread || 0) + 1
+    }
+
+  }else{
+
+    this.chatMap[friend] = {
+      friend_email: friend,
+      friend_name: friend,
+      last_message: messageText,
+      updated_at: msg.created_at,
+      unread: msg.sender !== this.user.email ? 1 : 0
+    }
+
+  }
+
+  this.syncChats()
 }
 
 }
 
 this.wsRooms[room]=ws
+
 })
+
 },
 
 togglePin(c){
   const i = this.pinned.indexOf(c.friend_email)
-  if(i>-1) this.pinned.splice(i,1)
-  else this.pinned.push(c.friend_email)
+
+  if(i>-1){
+    this.pinned.splice(i,1)
+  }else{
+    this.pinned.push(c.friend_email)
+  }
 
   localStorage.setItem("pinned", JSON.stringify(this.pinned))
+
+  this.syncChats() // 🔥 langsung update UI
 },
 
 openChat(c){

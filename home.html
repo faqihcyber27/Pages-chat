@@ -748,6 +748,7 @@ data(){
 return{
 user:{},
 chatMap:{},
+wsRooms:{},
 tab:'chats',
 contacts:[],
 chats:[],
@@ -834,6 +835,9 @@ if(msg.type === "init_chats"){
   })
 
   this.chats = Object.values(this.chatMap)
+  this.$nextTick(()=>{
+    this.initRoomSockets()
+  })
 }
 
 // ================= INIT CONTACTS =================
@@ -899,41 +903,6 @@ if(msg.type === "read_update"){
     },1200)
   }
 
-if(msg.type === "message"){
-
-  const messageText = msg.text || "📎 File"
-
-  const friend = msg.sender === this.user.email
-    ? msg.room.split("_").find(x=>x!==this.user.email)
-    : msg.sender
-
-  let chat = this.chatMap[friend]
-
-  if(chat){
-    chat.last_message = messageText
-    chat.updated_at = msg.created_at
-
-    if(msg.sender !== this.user.email){
-      chat.unread = (chat.unread || 0) + 1
-    }
-
-  }else{
-    chat = {
-      friend_email: friend,
-      friend_name: friend,
-      last_message: messageText,
-      updated_at: msg.created_at,
-      unread: msg.sender !== this.user.email ? 1 : 0
-    }
-
-    this.chatMap[friend] = chat
-  }
-
-  // 🔥 SINGLE SOURCE OF TRUTH
-  this.chats = Object.values(this.chatMap)
-    .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
-}
-
   // ================= CONTACT UPDATE =================
   if(msg.type === "contact_update"){
   this.ws.send(JSON.stringify({
@@ -970,6 +939,80 @@ methods:{
   
 getFriendEmail(c){
   return c.friend_email
+},
+
+initRoomSockets(){
+
+  this.chats.forEach(c=>{
+
+    const room = [this.user.email, c.friend_email].sort().join("_")
+
+    if(this.wsRooms[room]?.readyState === 1) return
+
+    const ws = new WebSocket(
+      "wss://worker-chat.jihadwajib68.workers.dev/ws?room="+room
+    )
+
+    ws.onmessage = (e)=>{
+      const msg = JSON.parse(e.data)
+
+      if(msg.type === "message"){
+        this.handleRealtimeMessage(msg)
+      }
+
+      if(msg.type === "typing"){
+        this.typingUsers = {
+          ...this.typingUsers,
+          [msg.sender]: true
+        }
+
+        setTimeout(()=>{
+          delete this.typingUsers[msg.sender]
+        },1200)
+      }
+    }
+
+    this.wsRooms[room] = ws
+  })
+},
+
+handleRealtimeMessage(msg){
+
+  const messageText = msg.text || "📎 File"
+
+  const friend = msg.sender === this.user.email
+    ? msg.room.split("_").find(x=>x!==this.user.email)
+    : msg.sender
+
+  let chat = this.chatMap[friend]
+
+  if(chat){
+    chat.last_message = messageText
+    chat.updated_at = msg.created_at
+
+    if(msg.sender !== this.user.email){
+      chat.unread = (chat.unread || 0) + 1
+    }
+
+  }else{
+    chat = {
+      friend_email: friend,
+      friend_name: friend,
+      last_message: messageText,
+      updated_at: msg.created_at,
+      unread: msg.sender !== this.user.email ? 1 : 0
+    }
+
+    this.chatMap[friend] = chat
+  }
+
+  // 🔥 WAJIB (biar Vue langsung render)
+  this.chatMap = { ...this.chatMap }
+
+  this.chats = [
+  this.chatMap[friend],
+  ...Object.values(this.chatMap).filter(c => c.friend_email !== friend)
+]
 },
 
 async saveProfile(){

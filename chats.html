@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+
 <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 
@@ -275,7 +278,7 @@ if(msg.type === "profile_update"){
 
 // REFRESH CHAT LIST
 if(msg.type === "chat_update"){
-  this.ws.send(JSON.stringify({
+  this.wsGlobal.send(JSON.stringify({
     type:"init_chats",
     user:this.user.email
   }))
@@ -287,6 +290,61 @@ if(msg.type === "chat_update"){
     if(chat) chat.unread=0
   }
 }
+
+// 🔥 INIT FCM
+const firebaseConfig = {
+  apiKey: "AIzaSy...",
+  authDomain: "chat-realtime-7b092.firebaseapp.com",
+  projectId: "chat-realtime-7b092",
+  messagingSenderId: "424831780632",
+  appId: "1:424831780632:web:6e42d806ea94392778406d"
+}
+
+if (!firebase.apps.length) {
+  firebase.initializeApp(firebaseConfig)
+}
+
+const messaging = firebase.messaging()
+
+navigator.serviceWorker.register("/sw.js").then(async (reg)=>{
+
+  const permission = await Notification.requestPermission()
+  console.log("PERMISSION:", permission)
+
+  if(permission !== "granted") return
+
+  const token = await messaging.getToken({
+    vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0",
+    serviceWorkerRegistration: reg
+  })
+
+  if(!token){
+    console.log("TOKEN NULL")
+    return
+  }
+
+  console.log("TOKEN:", token)
+
+  await fetch("https://worker-chat.jihadwajib68.workers.dev/save-token", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      token,
+      email: this.user.email
+    })
+  })
+
+})
+
+messaging.onMessage((payload)=>{
+  console.log("NOTIF MASUK:", payload)
+
+  if(Notification.permission === "granted"){
+    new Notification(payload.notification.title, {
+      body: payload.notification.body
+    })
+  }
+})
 
 },
 

@@ -436,7 +436,7 @@ localStorage.setItem("activeChat", JSON.stringify({
   bio:c.friend_bio,
   last_seen:c.friend_last_seen
 }))
-location.href="chat.html"
+top.location.href="chat.html"
 },
 
 getName(c){ return c.friend_name || c.friend_email },

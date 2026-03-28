@@ -42,6 +42,39 @@ body {
 }
 
 .active { color: #a78bfa; }
+
+/* POPUP ANIMATION */
+.popup {
+  animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn {
+  from {opacity:0; transform:translateY(-10px)}
+  to {opacity:1; transform:translateY(0)}
+}
+
+/* TOAST */
+.toast {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15,23,42,0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 10px 14px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 9999;
+  animation: toastIn 0.3s ease;
+}
+
+@keyframes toastIn {
+  from { opacity:0; transform:translate(-50%, -20px) }
+  to { opacity:1; transform:translate(-50%, 0) }
+}
+
 </style>
 </head>
 
@@ -57,23 +90,24 @@ if(!localStorage.getItem("user")){
 
   <!-- HEADER -->
   <div class="header p-4 flex justify-between items-center mx-2 mt-2 relative">
+
     <div class="flex items-center gap-3">
-      <img id="avatar" class="w-11 h-11 rounded-full">
+      <img id="avatar" class="w-11 h-11 rounded-full ring-2 ring-white/20">
       <div>
-        <h1 id="username"></h1>
+        <h1 id="username" class="font-semibold"></h1>
         <p class="text-xs opacity-70">Realtime Chat</p>
       </div>
     </div>
 
     <!-- 🔔 NOTIF -->
-    <button onclick="toggleRequests()" style="position:relative">
+    <button onclick="toggleRequests()" class="relative text-xl">
+
       🔔
+
       <span id="notifBadge"
-        style="position:absolute;top:-5px;right:-5px;
-               background:red;font-size:10px;
-               padding:2px 6px;border-radius:999px;
-               display:none">
+        class="absolute -top-1 -right-1 bg-red-500 text-[10px] px-1.5 rounded-full hidden">
       </span>
+
     </button>
   </div>
 
@@ -99,7 +133,7 @@ document.getElementById("avatar").src =
 const frame = document.getElementById("frame")
 frame.src = "chats.html"
 
-// ================= GLOBAL WS =================
+// ================= WS =================
 let ws = new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
 
 let requests = []
@@ -114,28 +148,26 @@ ws.onopen = ()=>{
 ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // INIT
   if(msg.type === "request_list"){
     requests = msg.data || []
     updateNotif()
   }
 
-  // NEW REQUEST
   if(msg.type === "new_request"){
     if(msg.data.to_email === user.email){
       requests.unshift(msg.data)
       updateNotif()
+      showToast(msg.data.from_email)
     }
   }
 
-  // UPDATE (ACCEPT / DELETE)
   if(msg.type === "request_update"){
     requests = requests.filter(r => r.id !== msg.id)
     updateNotif()
   }
 }
 
-// ================= NAVIGATION =================
+// ================= NAV =================
 function navigate(page, el){
   document.querySelectorAll(".nav-btn")
     .forEach(b=>b.classList.remove("active"))
@@ -150,9 +182,9 @@ function updateNotif(){
 
   if(requests.length > 0){
     badge.innerText = requests.length
-    badge.style.display = "inline-block"
+    badge.classList.remove("hidden")
   }else{
-    badge.style.display = "none"
+    badge.classList.add("hidden")
   }
 }
 
@@ -168,30 +200,39 @@ function toggleRequests(){
 
   popup = document.createElement("div")
   popup.id = "reqPopup"
-
-  popup.style.position = "absolute"
-  popup.style.top = "80px"
-  popup.style.right = "20px"
-  popup.style.background = "#020617"
-  popup.style.border = "1px solid rgba(255,255,255,0.1)"
-  popup.style.borderRadius = "12px"
-  popup.style.padding = "10px"
-  popup.style.width = "260px"
-  popup.style.zIndex = "999"
+  popup.className = "popup absolute right-4 top-20 w-72 rounded-xl bg-slate-900/95 border border-white/10 p-3 shadow-xl"
 
   if(requests.length === 0){
-    popup.innerHTML = `<p class="text-sm opacity-60">No requests</p>`
+    popup.innerHTML = `
+      <p class="text-sm opacity-60 text-center py-4">
+        No friend requests
+      </p>
+    `
   }else{
     popup.innerHTML = requests.map(r=>`
-      <div style="margin-bottom:12px">
-        <p style="font-size:14px">${r.from_email}</p>
-        <div style="margin-top:6px;display:flex;gap:6px">
-          <button onclick="respond(${r.id}, 'accept')"
-            style="background:#16a34a;padding:5px 10px;border-radius:6px">Accept</button>
-          <button onclick="respond(${r.id}, 'reject')"
-            style="background:#dc2626;padding:5px 10px;border-radius:6px">Reject</button>
+
+      <div class="flex items-center justify-between mb-3 bg-white/5 p-2 rounded-lg">
+
+        <div class="flex items-center gap-2">
+          <img src="https://ui-avatars.com/api/?name=${r.from_email}"
+            class="w-9 h-9 rounded-full">
+
+          <div>
+            <p class="text-sm font-semibold">${r.from_email}</p>
+            <p class="text-xs opacity-50">wants to connect</p>
+          </div>
         </div>
+
+        <div class="flex gap-1">
+          <button onclick="respond(${r.id}, 'accept')"
+            class="bg-green-500 px-2 py-1 rounded text-xs">✔</button>
+
+          <button onclick="respond(${r.id}, 'reject')"
+            class="bg-red-500 px-2 py-1 rounded text-xs">✖</button>
+        </div>
+
       </div>
+
     `).join("")
   }
 
@@ -210,8 +251,38 @@ async function respond(id, action){
   requests = requests.filter(r=>r.id !== id)
   updateNotif()
 
-  const popup = document.getElementById("reqPopup")
-  if(popup) popup.remove()
+  document.getElementById("reqPopup")?.remove()
+}
+
+function showToast(email){
+
+  const old = document.getElementById("toast")
+  if(old) old.remove()
+
+  const toast = document.createElement("div")
+  toast.id = "toast"
+  toast.className = "toast"
+
+  toast.innerHTML = `
+    <img src="https://ui-avatars.com/api/?name=${email}"
+      class="w-8 h-8 rounded-full">
+
+    <div>
+      <p class="text-sm font-semibold">${email}</p>
+      <p class="text-xs opacity-60">sent you a friend request</p>
+    </div>
+  `
+
+  toast.onclick = ()=>{
+    toggleRequests()
+    toast.remove()
+  }
+
+  document.body.appendChild(toast)
+
+  setTimeout(()=>{
+    toast.remove()
+  }, 3000)
 }
 </script>
 

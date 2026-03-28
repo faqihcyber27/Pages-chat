@@ -287,35 +287,49 @@ function showToast(msg){
 // 🔥 INIT FCM
 async function initFCM(){
 
-  const permission = await Notification.requestPermission()
+  try {
 
-  if(permission !== "granted"){
-    console.log("notif ditolak")
-    return
-  }
+    const permission = await Notification.requestPermission()
+    console.log("PERMISSION:", permission)
 
-  const reg = await navigator.serviceWorker.ready
+    if(permission !== "granted"){
+      alert("NOTIF DITOLAK ❌")
+      return
+    }
 
-  const token = await messaging.getToken({
-    vapidKey: "YOUR_VAPID_KEY",
-    serviceWorkerRegistration: reg
-  })
+    const reg = await navigator.serviceWorker.ready
+    console.log("SW READY")
 
-  if(!token){
-    console.log("TOKEN NULL")
-    return
-  }
-
-  console.log("TOKEN:", token)
-
-  await fetch(API + "/save-token", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      token,
-      email: user.email
+    const token = await messaging.getToken({
+      vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0",
+      serviceWorkerRegistration: reg
     })
-  })
+
+    if(!token){
+      alert("TOKEN NULL ❌")
+      return
+    }
+
+    console.log("TOKEN:", token)
+    alert("TOKEN ADA ✅")
+
+    const res = await fetch(API + "/save-token", {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        token,
+        email: user.email
+      })
+    })
+
+    const text = await res.text()
+    console.log("SAVE RESPONSE:", text)
+    alert("TOKEN DISIMPAN ✅")
+
+  } catch(e){
+    console.error(e)
+    alert("ERROR: " + e.message)
+  }
 }
 
 //// 🔥 WEBSOCKET GLOBAL

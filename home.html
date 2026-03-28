@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <link rel="manifest" href="/manifest.json">
 
 <style>
@@ -302,147 +303,152 @@ class="hidden fixed inset-0 flex items-center justify-center bg-black/70">
 
 <!-- TOAST -->
 <div id="toast"></div>
-
 <script>
-const API="https://worker-chat.jihadwajib68.workers.dev"
-const user = JSON.parse(localStorage.getItem("user"))
+const WS_URL = "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 
-document.getElementById("username").innerText =
-  "Hi, " + user.name
+Vue.createApp({
 
-document.getElementById("avatar").src =
-  user.avatar || "https://ui-avatars.com/api/?name=" + user.name
+data(){
+return{
+user: JSON.parse(localStorage.getItem("user")),
+chats:[],
+onlineUsers:[],
+typingUsers:{},
+wsGlobal:null,
+wsRooms:{},
+pinned: JSON.parse(localStorage.getItem("pinned")||"[]")
+}
+},
 
-function navigate(page, el){
-  const frame = document.getElementById("frame")
-  frame.style.opacity = 0
-  setTimeout(()=>{
-    frame.src = page
-    frame.style.opacity = 1
-  },150)
+computed:{
+pinnedChats(){
+  return this.chats.filter(c=>this.pinned.includes(c.friend_email))
+},
+normalChats(){
+  return this.chats.filter(c=>!this.pinned.includes(c.friend_email))
+}
+},
 
-  document.querySelectorAll(".nav-btn")
-    .forEach(b=>b.classList.remove("active"))
+mounted(){
 
-  el.classList.add("active")
+this.wsGlobal = new WebSocket(WS_URL)
+
+this.wsGlobal.onopen = ()=>{
+  this.wsGlobal.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
+
+  this.wsGlobal.send(JSON.stringify({
+    type:"init_chats",
+    user:this.user.email
+  }))
 }
 
-let requests = []
+this.wsGlobal.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
 
-function updateBadge(){
-  const badge = document.getElementById("notifCount")
-  if(requests.length){
-    badge.classList.remove("hidden")
-    badge.innerText = requests.length
-  }else{
-    badge.classList.add("hidden")
-  }
-}
-
-function renderRequests(){
-  const el = document.getElementById("requestList")
-
-  if(!requests.length){
-    el.innerHTML = `<div class="text-center opacity-60">No requests</div>`
+  if(msg.type === "init_chats"){
+    this.chats = msg.chats || []
+    this.$nextTick(()=> this.initRoomSockets())
     return
   }
 
-  el.innerHTML = requests.map(r=>`
-    <div class="request-card mb-2">
-
-      <div class="flex items-center gap-2">
-        <img src="${r.avatar || 'https://i.pravatar.cc/40'}"
-           class="w-8 h-8 rounded-full">
-        <p class="text-sm">${r.name || r.from_email}</p>
-      </div>
-
-      <div class="flex gap-2">
-        <button onclick="respond(${r.id},'accept')">✔</button>
-        <button onclick="respond(${r.id},'reject')">✕</button>
-      </div>
-
-    </div>
-  `).join("")
-}
-
-async function respond(id, action){
-  await fetch(API+"/respond-request",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({id, action})
-  })
-}
-
-function toggleRequests(){
-  document.getElementById("requestPopup").classList.remove("hidden")
-}
-function closeRequests(){
-  document.getElementById("requestPopup").classList.add("hidden")
-}
-
-function showToast(msg){
-  const t = document.getElementById("toast")
-  t.innerText = msg
-  t.classList.add("show")
-  setTimeout(()=>t.classList.remove("show"),2000)
-}
-
-//// 🔥 WEBSOCKET GLOBAL
-const ws = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
-)
-
-ws.onopen = ()=>{
-  ws.send(JSON.stringify({
-    type:"online",
-    user:user.email
-  }))
-
-  // 🔥 TAMBAHAN WAJIB
-  ws.send(JSON.stringify({
-    type:"init_requests",
-    user:user.email
-  }))
-}
-
-ws.onmessage = (e)=>{
-  const msg = JSON.parse(e.data)
-
-  // 📥 FULL LIST
-  if(msg.type==="request_list"){
-    requests = msg.data || []
-    updateBadge()
-    renderRequests()
+  if(msg.type==="online_list"){
+    this.onlineUsers = msg.users || []
   }
 
-  // ➕ NEW REQUEST
-  if(msg.type==="new_request" && msg.data.to_email === user.email){
-  requests.unshift(msg.data)
-  updateBadge()
-  renderRequests()
-}
-
-  if(msg.type === "contact_request"){
-  if(msg.to === user.email){
-    ws.send(JSON.stringify({
-      type:"init_requests",
-      user:user.email
+  if(msg.type==="message"){
+    this.wsGlobal.send(JSON.stringify({
+      type:"init_chats",
+      user:this.user.email
     }))
   }
 }
 
-  // ❌ REMOVE
-  if(msg.type==="request_update"){
-    requests = requests.filter(r=>r.id!==msg.id)
-    updateBadge()
-    renderRequests()
-  }
+},
 
-  // 🎉 ACCEPT TOAST
-  if(msg.type==="request_accepted" && msg.to === user.email){
-    showToast(msg.name + " menerima pertemanan 🎉")
+methods:{
+
+initRoomSockets(){
+this.chats.forEach(c=>{
+const room = [this.user.email,c.friend_email].sort().join("_")
+if(this.wsRooms[room]) return
+
+const ws = new WebSocket(
+  "wss://worker-chat.jihadwajib68.workers.dev/ws?room="+room
+)
+
+ws.onmessage = (e)=>{
+const msg = JSON.parse(e.data)
+
+if(msg.type==="message"){
+  const friend = msg.sender === this.user.email
+    ? msg.room.split("_").find(x=>x!==this.user.email)
+    : msg.sender
+
+  const chat = this.chats.find(x=>x.friend_email===friend)
+
+  if(chat){
+    chat.last_message = msg.text || "📎 File"
+    chat.updated_at = msg.created_at
+
+    if(msg.sender !== this.user.email){
+      chat.unread = (chat.unread||0)+1
+    }
   }
 }
+}
+
+this.wsRooms[room]=ws
+})
+},
+
+togglePin(c){
+  const i = this.pinned.indexOf(c.friend_email)
+  if(i>-1){
+    this.pinned.splice(i,1)
+  }else{
+    this.pinned.push(c.friend_email)
+  }
+  localStorage.setItem("pinned", JSON.stringify(this.pinned))
+},
+
+isPinned(email){
+  return this.pinned.includes(email)
+},
+
+openChat(c){
+localStorage.setItem("activeChat", JSON.stringify(c))
+location.href="chat.html"
+},
+
+getName(c){ return c.friend_name || c.friend_email },
+getInitial(name){ return name.charAt(0).toUpperCase() },
+
+getColor(name){
+const colors=["#7c3aed","#4f46e5","#059669","#dc2626"]
+let hash=0
+for(let i=0;i<name.length;i++){
+hash=name.charCodeAt(i)+((hash<<5)-hash)
+}
+return colors[Math.abs(hash)%colors.length]
+},
+
+isOnline(email){
+  return this.onlineUsers.includes(email)
+},
+
+formatTime(t){
+if(!t) return ''
+const d=new Date(t)
+return d.getHours().toString().padStart(2,'0')+':'+
+d.getMinutes().toString().padStart(2,'0')
+}
+
+}
+
+}).mount("#app")
 </script>
 
 </body>

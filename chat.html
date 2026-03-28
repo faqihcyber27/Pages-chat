@@ -119,7 +119,7 @@ if(!this.chat.email){
   return
 }
 
-this.room = [this.user.email, this.chat.email].sort().join("_")
+this.room = [this.user.email, this.chat.email].sort().join("||")
 
 // ✅ SINGLE WEBSOCKET
 this.ws = new WebSocket(WS)

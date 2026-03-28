@@ -145,7 +145,7 @@ if(!localStorage.getItem("user")){
   </div>
 
   <div id="app" class="h-full flex flex-col">
-
+<iframe id="frame" class="hidden flex-1 w-full border-0"></iframe>
 <div class="px-4 mt-4 text-xl font-semibold">Chats</div>
 
 <div class="px-4 mt-3">
@@ -277,7 +277,7 @@ if(!localStorage.getItem("user")){
 
   <!-- NAVBAR -->
   <div class="navbar flex justify-around text-xl">
-    <button onclick="navigate(this)" class="nav-btn active">💬</button>
+    <button onclick="navigate('chat', this)" class="nav-btn active">💬</button>
     <button onclick="navigate('contacts.html', this)" class="nav-btn">👤</button>
     <button onclick="navigate('profile.html', this)" class="nav-btn">⚙️</button>
   </div>
@@ -420,7 +420,7 @@ isPinned(email){
 
 openChat(c){
 localStorage.setItem("activeChat", JSON.stringify(c))
-location.href="chat.html"
+parent.location.href="chat.html"
 },
 
 getName(c){ return c.friend_name || c.friend_email },

@@ -287,30 +287,36 @@ function showToast(msg){
 // 🔥 INIT FCM
 async function initFCM(){
 
-  const permission = await Notification.requestPermission()
+  alert("INIT FCM START")
 
-  if(permission !== "granted"){
-    console.log("notif ditolak")
-    return
-  }
+  try {
 
-  const reg = await navigator.serviceWorker.ready
+    const permission = await Notification.requestPermission()
+    alert("PERMISSION: " + permission)
 
-const token = await messaging.getToken({
-  vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0",
-  serviceWorkerRegistration: reg
-})
+    if(permission !== "granted"){
+      alert("NOTIF DITOLAK ❌")
+      return
+    }
 
-  console.log("TOKEN:", token)
+    const reg = await navigator.serviceWorker.ready
+    alert("SW READY ✅")
 
-  await fetch(API + "/save-token", {
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({
-      token,
-      email: user.email
+    const token = await messaging.getToken({
+      vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0",
+      serviceWorkerRegistration: reg
     })
-  })
+
+    if(!token){
+      alert("TOKEN NULL ❌")
+      return
+    }
+
+    alert("TOKEN: " + token)
+
+  } catch(e){
+    alert("ERROR FCM ❌: " + e.message)
+  }
 }
 
 //// 🔥 WEBSOCKET GLOBAL
@@ -318,13 +324,13 @@ const ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
 
-// 🔥 REGISTER SW
 navigator.serviceWorker.register("/sw.js")
-.then(()=>{
+.then(reg=>{
+  alert("SW REGISTERED ✅")
   initFCM()
 })
 .catch(err=>{
-  console.error("SW ERROR:", err)
+  alert("SW ERROR ❌: " + err.message)
 })
 
 ws.onopen = ()=>{

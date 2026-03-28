@@ -56,7 +56,7 @@ if(!localStorage.getItem("user")){
 <div class="h-screen flex flex-col">
 
   <!-- HEADER -->
-  <div class="header p-4 flex justify-between items-center mx-2 mt-2">
+  <div class="header p-4 flex justify-between items-center mx-2 mt-2 relative">
     <div class="flex items-center gap-3">
       <img id="avatar" class="w-11 h-11 rounded-full">
       <div>
@@ -64,10 +64,20 @@ if(!localStorage.getItem("user")){
         <p class="text-xs opacity-70">Realtime Chat</p>
       </div>
     </div>
-    <button onclick="toggleRequests()">🔔</button>
+
+    <!-- 🔔 NOTIF -->
+    <button onclick="toggleRequests()" style="position:relative">
+      🔔
+      <span id="notifBadge"
+        style="position:absolute;top:-5px;right:-5px;
+               background:red;font-size:10px;
+               padding:2px 6px;border-radius:999px;
+               display:none">
+      </span>
+    </button>
   </div>
 
-  <!-- CONTENT (FULL IFRAME) -->
+  <!-- CONTENT -->
   <iframe id="frame" class="flex-1 w-full border-0"></iframe>
 
   <!-- NAVBAR -->
@@ -87,20 +97,121 @@ document.getElementById("avatar").src =
   user.avatar || "https://ui-avatars.com/api/?name=" + user.name
 
 const frame = document.getElementById("frame")
-
-// 🔥 DEFAULT LOAD
 frame.src = "chats.html"
 
-function navigate(page, el){
+// ================= GLOBAL WS =================
+let ws = new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
 
-  // set active button
+let requests = []
+
+ws.onopen = ()=>{
+  ws.send(JSON.stringify({
+    type:"init_requests",
+    user:user.email
+  }))
+}
+
+ws.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  // INIT
+  if(msg.type === "request_list"){
+    requests = msg.data || []
+    updateNotif()
+  }
+
+  // NEW REQUEST
+  if(msg.type === "new_request"){
+    if(msg.data.to_email === user.email){
+      requests.unshift(msg.data)
+      updateNotif()
+    }
+  }
+
+  // UPDATE (ACCEPT / DELETE)
+  if(msg.type === "request_update"){
+    requests = requests.filter(r => r.id !== msg.id)
+    updateNotif()
+  }
+}
+
+// ================= NAVIGATION =================
+function navigate(page, el){
   document.querySelectorAll(".nav-btn")
     .forEach(b=>b.classList.remove("active"))
 
   el.classList.add("active")
-
-  // load page
   frame.src = page
+}
+
+// ================= BADGE =================
+function updateNotif(){
+  const badge = document.getElementById("notifBadge")
+
+  if(requests.length > 0){
+    badge.innerText = requests.length
+    badge.style.display = "inline-block"
+  }else{
+    badge.style.display = "none"
+  }
+}
+
+// ================= POPUP =================
+function toggleRequests(){
+
+  let popup = document.getElementById("reqPopup")
+
+  if(popup){
+    popup.remove()
+    return
+  }
+
+  popup = document.createElement("div")
+  popup.id = "reqPopup"
+
+  popup.style.position = "absolute"
+  popup.style.top = "80px"
+  popup.style.right = "20px"
+  popup.style.background = "#020617"
+  popup.style.border = "1px solid rgba(255,255,255,0.1)"
+  popup.style.borderRadius = "12px"
+  popup.style.padding = "10px"
+  popup.style.width = "260px"
+  popup.style.zIndex = "999"
+
+  if(requests.length === 0){
+    popup.innerHTML = `<p class="text-sm opacity-60">No requests</p>`
+  }else{
+    popup.innerHTML = requests.map(r=>`
+      <div style="margin-bottom:12px">
+        <p style="font-size:14px">${r.from_email}</p>
+        <div style="margin-top:6px;display:flex;gap:6px">
+          <button onclick="respond(${r.id}, 'accept')"
+            style="background:#16a34a;padding:5px 10px;border-radius:6px">Accept</button>
+          <button onclick="respond(${r.id}, 'reject')"
+            style="background:#dc2626;padding:5px 10px;border-radius:6px">Reject</button>
+        </div>
+      </div>
+    `).join("")
+  }
+
+  document.body.appendChild(popup)
+}
+
+// ================= RESPOND =================
+async function respond(id, action){
+
+  await fetch("https://worker-chat.jihadwajib68.workers.dev/respond-request",{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ id, action })
+  })
+
+  requests = requests.filter(r=>r.id !== id)
+  updateNotif()
+
+  const popup = document.getElementById("reqPopup")
+  if(popup) popup.remove()
 }
 </script>
 

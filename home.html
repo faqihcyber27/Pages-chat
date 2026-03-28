@@ -9,12 +9,16 @@
 
 <style>
 body {background:#020617;color:white;}
+
 .card{
   background:rgba(255,255,255,0.05);
   border:1px solid rgba(255,255,255,0.08);
   border-radius:16px;
 }
+
 .active{color:#a78bfa;}
+
+.fast{transition:0.15s;}
 </style>
 </head>
 
@@ -39,7 +43,7 @@ body {background:#020617;color:white;}
 <div class="flex-1 overflow-auto p-4">
 
 <!-- CHATS -->
-<div v-if="tab==='chats'">
+<div v-show="tab==='chats'">
 
 <input v-model="search"
 placeholder="Search..."
@@ -52,7 +56,9 @@ class="w-full p-2 mb-3 bg-white/10 rounded">
 <div v-for="c in pinnedChats"
 :key="getFriendEmail(c)"
 @click="openChat(c)"
-class="card p-3 mb-2 flex justify-between">
+@touchstart="startPress(c)"
+@touchend="cancelPress"
+class="card p-3 mb-2 flex justify-between fast">
 
 <div>
 <p>{{getName(c)}} ⭐</p>
@@ -64,11 +70,13 @@ class="card p-3 mb-2 flex justify-between">
 </div>
 </div>
 
-<!-- ALL -->
+<!-- NORMAL -->
 <div v-for="c in normalChats"
 :key="getFriendEmail(c)"
 @click="openChat(c)"
-class="card p-3 mb-2 flex justify-between">
+@touchstart="startPress(c)"
+@touchend="cancelPress"
+class="card p-3 mb-2 flex justify-between fast">
 
 <div>
 <p>{{getName(c)}}</p>
@@ -79,24 +87,26 @@ class="card p-3 mb-2 flex justify-between">
 
 <div class="text-right">
 <p class="text-xs">{{formatTime(c.updated_at)}}</p>
+
 <div v-if="c.unread>0"
 class="bg-red-500 px-2 text-xs rounded">
 {{c.unread}}
 </div>
+
 <button @click.stop="togglePin(c)">⭐</button>
-<button @click.stop="deleteChat(c)">🗑</button>
-</div>
 
 </div>
 
 </div>
 
-<!-- CONTACTS -->
-<div v-if="tab==='contacts'">
+</div>
+
+<!-- CONTACT -->
+<div v-show="tab==='contacts'">
 
 <div v-for="c in contacts"
 :key="c.email"
-class="card p-3 mb-2 flex justify-between">
+class="card p-3 mb-2 flex justify-between fast">
 
 <span>{{c.name}}</span>
 
@@ -110,7 +120,7 @@ class="card p-3 mb-2 flex justify-between">
 </div>
 
 <!-- PROFILE -->
-<div v-if="tab==='profile'">
+<div v-show="tab==='profile'">
 
 <input v-model="user.name" class="w-full p-2 mb-2 bg-white/10 rounded">
 <textarea v-model="user.bio" class="w-full p-2 bg-white/10 rounded"></textarea>
@@ -148,7 +158,10 @@ requests:[],
 search:'',
 
 pinned: JSON.parse(localStorage.getItem("pinned")||"[]"),
+
 typingUsers:{},
+pressTimer:null,
+
 ws:null
 }
 },
@@ -183,7 +196,7 @@ if(msg.type==="init_chats") this.chats = msg.chats || []
 if(msg.type==="init_contacts") this.contacts = msg.contacts || []
 if(msg.type==="request_list") this.requests = msg.data || []
 
-// REALTIME CHAT
+// MESSAGE REALTIME
 if(msg.type==="message"){
 
 const friend = msg.sender===this.user.email
@@ -213,15 +226,20 @@ updated_at:msg.created_at,
 unread:1
 })
 }
+
 }
 
-// TYPING
+// TYPING REALTIME
 if(msg.type==="typing"){
 this.typingUsers[msg.sender]=true
-setTimeout(()=>delete this.typingUsers[msg.sender],1000)
+
+setTimeout(()=>{
+delete this.typingUsers[msg.sender]
+},800)
 }
 
 }
+
 },
 
 methods:{
@@ -241,11 +259,25 @@ return new Date(t).toLocaleTimeString()
 
 togglePin(c){
 const email=this.getFriendEmail(c)
-const i=this.pinned.indexOf(email)
-if(i>-1) this.pinned.splice(i,1)
-else this.pinned.push(email)
+
+if(this.pinned.includes(email)){
+this.pinned = this.pinned.filter(x=>x!==email)
+}else{
+this.pinned = [email,...this.pinned]
+}
 
 localStorage.setItem("pinned",JSON.stringify(this.pinned))
+},
+
+// LONG PRESS DELETE
+startPress(c){
+this.pressTimer=setTimeout(()=>{
+this.deleteChat(c)
+},600)
+},
+
+cancelPress(){
+clearTimeout(this.pressTimer)
 },
 
 openChat(c){

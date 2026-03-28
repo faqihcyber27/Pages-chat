@@ -43,7 +43,7 @@ body {
 <div ref="chatBox" class="flex-1 overflow-auto p-3 space-y-2">
 
   <div v-for="(m,i) in messages"
-       :key="i"
+       :key="m.created_at + m.sender"
        :class="m.sender===user.email ? 'flex justify-end' : 'flex'">
 
     <div :class="[
@@ -79,6 +79,7 @@ body {
   <input v-model="text"
          @input="sendTyping"
          @keyup.enter="send"
+         placeholder="Type message..."
          class="flex-1 px-3 py-2 rounded bg-white/10 outline-none">
 
   <button @click="send"
@@ -89,7 +90,7 @@ body {
 </div>
 
 <script>
-const WS = "wss://worker-chat.jihadwajib68.workers.dev/ws"
+const WS = "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 
 Vue.createApp({
 
@@ -103,12 +104,12 @@ text:'',
 ws:null,
 room:'',
 typingUser:'',
-onlineUsers:[],
-wsGlobal:null
+typingTimeout:null,
+onlineUsers:[]
 }
 },
 
-async mounted(){
+mounted(){
 
 this.user = JSON.parse(localStorage.getItem("user") || "{}")
 this.chat = JSON.parse(localStorage.getItem("activeChat") || "{}")
@@ -120,30 +121,32 @@ if(!this.chat.email){
 
 this.room = [this.user.email, this.chat.email].sort().join("_")
 
-// ================= WS ROOM =================
-this.ws = new WebSocket(`${WS}?room=${this.room}`)
+// ✅ SINGLE WEBSOCKET
+this.ws = new WebSocket(WS)
 
-this.ws.onopen = () => {
-
-  // INIT HISTORY
-  this.ws.send(JSON.stringify({
-    type:"init_messages",
-    room:this.room
-  }))
+this.ws.onopen = ()=>{
 
   // ONLINE
   this.ws.send(JSON.stringify({
     type:"online",
     user:this.user.email
   }))
-  
+
+  // INIT CHAT HISTORY
   this.ws.send(JSON.stringify({
-  type:"read",
-  room:this.room,
-  user:this.user.email
-}))
+    type:"init_messages",
+    room:this.room
+  }))
+
+  // READ STATUS
+  this.ws.send(JSON.stringify({
+    type:"read",
+    room:this.room,
+    user:this.user.email
+  }))
 }
 
+// ✅ GLOBAL LISTENER
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
@@ -154,28 +157,22 @@ this.ws.onmessage = (e)=>{
     return
   }
 
-  // MESSAGE
+  // ONLINE USERS
+  if(msg.type==="online_list"){
+    this.onlineUsers = msg.users || []
+    return
+  }
+
+  // MESSAGE REALTIME
   if(msg.type==="message"){
 
     if(msg.room !== this.room) return
+
+    // anti duplicate
     if(this.messages.find(m =>
-    m.created_at === msg.created_at &&
-    m.sender === msg.sender
-  )) return
-
-  this.messages.push(msg)
-
-    const last = this.messages[this.messages.length - 1]
-
-    // 🔥 ANTI DOUBLE
-    if(
-      last &&
-      last.text === msg.text &&
-      last.sender === msg.sender &&
-      Math.abs(new Date(last.created_at) - new Date(msg.created_at)) < 1000
-    ){
-      return
-    }
+      m.created_at === msg.created_at &&
+      m.sender === msg.sender
+    )) return
 
     this.messages.push(msg)
     this.text=''
@@ -186,6 +183,7 @@ this.ws.onmessage = (e)=>{
   // TYPING
   if(msg.type==="typing"){
     if(msg.sender===this.user.email) return
+    if(msg.room !== this.room) return
 
     this.typingUser = msg.sender
 
@@ -193,35 +191,21 @@ this.ws.onmessage = (e)=>{
     this.typingTimeout = setTimeout(()=>{
       this.typingUser=''
     },1000)
+
+    return
   }
-  
-  if(msg.type === "read_update"){
-  if(msg.room === this.room){
-    this.messages = this.messages.map(m => ({
-      ...m,
-      is_read:1
-    }))
+
+  // READ UPDATE
+  if(msg.type==="read_update"){
+    if(msg.room === this.room){
+      this.messages = this.messages.map(m => ({
+        ...m,
+        is_read:1
+      }))
+    }
+    return
   }
-}
 
-}
-
-// ================= GLOBAL =================
-this.wsGlobal = new WebSocket(`${WS}?room=global`)
-
-this.wsGlobal.onopen = ()=>{
-  this.wsGlobal.send(JSON.stringify({
-    type:"online",
-    user:this.user.email
-  }))
-}
-
-this.wsGlobal.onmessage = (e)=>{
-  const msg = JSON.parse(e.data)
-
-  if(msg.type==="online_list"){
-    this.onlineUsers = msg.users || []
-  }
 }
 
 },
@@ -229,7 +213,7 @@ this.wsGlobal.onmessage = (e)=>{
 methods:{
 
 send(){
-  if(!this.text) return
+  if(!this.text.trim()) return
 
   this.ws.send(JSON.stringify({
     type:"message",

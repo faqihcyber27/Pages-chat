@@ -348,8 +348,8 @@ button:active {
           <p class="font-semibold flex items-center gap-2">
 
           <!-- NORMAL -->
-          <span v-else>
-          {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
+          <span>
+          {{c.friend_name || c.friend_email}}
           </span>
 
           <!-- ONLINE DOT -->
@@ -747,6 +747,7 @@ Vue.createApp({
 data(){
 return{
 user:{},
+chatMap:{},
 tab:'chats',
 contacts:[],
 chats:[],
@@ -771,7 +772,7 @@ ws:null
 computed:{
 filteredChats(){
   return this.chats.filter(c=>{
-    const name = (c.friend_name || (c.user1===this.user.email?c.user2:c.user1)).toLowerCase()
+    const name = (c.friend_name || c.friend_email).toLowerCase()
     return name.includes(this.search.toLowerCase())
   })
 },
@@ -826,7 +827,13 @@ this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
   // ================= INIT CHATS =================
 if(msg.type === "init_chats"){
-  this.chats = msg.chats || []
+  this.chatMap = {}
+
+  ;(msg.chats || []).forEach(c=>{
+    this.chatMap[c.friend_email] = c
+  })
+
+  this.chats = Object.values(this.chatMap)
 }
 
 // ================= INIT CONTACTS =================
@@ -837,14 +844,6 @@ if(msg.type === "init_contacts"){
 // ================= REQUEST LIST =================
 if(msg.type === "request_list"){
   this.requests = msg.data || []
-}
-
-// ================= CHAT UPDATE (GLOBAL REFRESH) =================
-if(msg.type === "chat_update"){
-  this.ws.send(JSON.stringify({
-    type:"init_chats",
-    user:this.user.email
-  }))
 }
 
 // ================= PROFILE UPDATE =================
@@ -900,50 +899,40 @@ if(msg.type === "read_update"){
     },1200)
   }
 
-  // ================= MESSAGE REALTIME =================
-  if(msg.type === "message"){
+if(msg.type === "message"){
 
-    const messageText = msg.text || "📎 File"
+  const messageText = msg.text || "📎 File"
 
-    const friend = msg.sender === this.user.email
-      ? msg.room.split("_").find(x=>x!==this.user.email)
-      : msg.sender
+  const friend = msg.sender === this.user.email
+    ? msg.room.split("_").find(x=>x!==this.user.email)
+    : msg.sender
 
-    let chat = this.chats.find(c =>
-      this.getFriendEmail(c) === friend
-    )
+  let chat = this.chatMap[friend]
 
-    // ================= UPDATE CHAT =================
-    if(chat){
+  if(chat){
+    chat.last_message = messageText
+    chat.updated_at = msg.created_at
 
-      chat.last_message = messageText
-      chat.updated_at = msg.created_at
-
-      if(msg.sender !== this.user.email){
-        chat.unread = (chat.unread || 0) + 1
-      }
-
-      // 🔥 pindahkan ke atas
-      this.chats = [
-        {...chat},
-        ...this.chats.filter(c => this.getFriendEmail(c) !== friend)
-      ]
-
-    }else{
-
-      // ================= CHAT BARU =================
-      const newChat = {
-        friend_email: friend,
-        friend_name: friend,
-        last_message: messageText,
-        updated_at: msg.created_at,
-        unread: msg.sender !== this.user.email ? 1 : 0
-      }
-
-      this.chats.unshift(newChat)
+    if(msg.sender !== this.user.email){
+      chat.unread = (chat.unread || 0) + 1
     }
 
+  }else{
+    chat = {
+      friend_email: friend,
+      friend_name: friend,
+      last_message: messageText,
+      updated_at: msg.created_at,
+      unread: msg.sender !== this.user.email ? 1 : 0
+    }
+
+    this.chatMap[friend] = chat
   }
+
+  // 🔥 SINGLE SOURCE OF TRUTH
+  this.chats = Object.values(this.chatMap)
+    .sort((a,b)=> new Date(b.updated_at) - new Date(a.updated_at))
+}
 
   // ================= CONTACT UPDATE =================
   if(msg.type === "contact_update"){
@@ -980,7 +969,7 @@ if(msg.type === "read_update"){
 methods:{
   
 getFriendEmail(c){
-  return c.friend_email || (c.user1===this.user.email ? c.user2 : c.user1)
+  return c.friend_email
 },
 
 async saveProfile(){
@@ -1053,7 +1042,7 @@ this.ws.send(JSON.stringify({
 
 openChat(c){
 
-const email = c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
+const email = c.friend_email
 const room = [this.user.email, email].sort().join("_")
 
 fetch(API+"/mark-read",{
@@ -1089,7 +1078,7 @@ window.location.href="chat.html"
 // ================= UI =================
 
 getName(c){
-  return c.friend_name || (c.user1===this.user.email ? c.user2 : c.user1)
+  return c.friend_name || c.friend_email
 },
 
 getInitial(name){

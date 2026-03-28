@@ -319,9 +319,12 @@ const ws = new WebSocket(
 )
 
 // 🔥 REGISTER SW
-navigator.serviceWorker.register("/firebase-messaging-sw.js")
+navigator.serviceWorker.register("/sw.js")
 .then(()=>{
   initFCM()
+})
+.catch(err=>{
+  console.error("SW ERROR:", err)
 })
 
 ws.onopen = ()=>{

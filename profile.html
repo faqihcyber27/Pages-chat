@@ -9,97 +9,34 @@
 
 <style>
 body {
-  background: linear-gradient(180deg, #020617, #020617);
+  background: #020617;
   color: white;
 }
 
-/* HEADER */
 .profile-header {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
-  border-radius: 24px;
-  padding: 35px 20px;
+  background: linear-gradient(135deg, #7c3aed, #4f46e5);
+  border-radius: 20px;
+  padding: 30px 20px;
   text-align: center;
-  position: relative;
-  overflow: hidden;
 }
 
-.profile-header::before {
-  content:"";
-  position:absolute;
-  inset:0;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.2), transparent 60%);
-}
-
-/* AVATAR */
-.avatar {
-  border: 3px solid rgba(255,255,255,0.2);
-  box-shadow: 0 15px 35px rgba(124,58,237,0.6);
-}
-
-/* INPUT */
-.input-glass {
+.input {
   background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(20px);
   border: 1px solid rgba(255,255,255,0.1);
-  transition: 0.3s;
 }
 
-.input-glass:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 15px rgba(124,58,237,0.4);
-}
-
-/* BUTTON */
-.btn-primary {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
-  box-shadow: 0 10px 25px rgba(124,58,237,0.4);
-  transition: 0.25s;
-}
-
-.btn-primary:hover {
-  transform: scale(1.03);
-}
-
-.btn-danger {
-  background: rgba(255,0,0,0.15);
-  border: 1px solid rgba(255,0,0,0.3);
-  transition: 0.25s;
-}
-
-.btn-danger:hover {
-  background: rgba(255,0,0,0.3);
-}
-
-/* TOAST */
 .toast {
   position: fixed;
-  bottom: 90px;
+  bottom: 80px;
   left: 50%;
-  transform: translateX(-50%) translateY(20px);
+  transform: translateX(-50%);
   background: rgba(20,20,30,0.9);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.1);
-  padding: 12px 20px;
-  border-radius: 14px;
+  padding: 10px 16px;
+  border-radius: 12px;
   opacity: 0;
-  transition: 0.3s;
+  transition: .3s;
 }
-
-.toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-
-/* EDIT BUTTON */
-.edit-btn {
-  position:absolute;
-  bottom:0;
-  right:0;
-  background: rgba(255,255,255,0.2);
-  backdrop-filter: blur(10px);
-  padding:6px;
-  border-radius:50%;
-}
+.toast.show { opacity:1; }
 </style>
 </head>
 
@@ -111,178 +48,177 @@ body {
 <div class="profile-header">
 
   <div class="relative inline-block">
+    <img :src="user.avatar || defaultAvatar"
+         class="w-24 h-24 rounded-full object-cover">
 
-    <img :src="user.avatar || 'https://i.pravatar.cc/150'"
-    class="w-28 h-28 rounded-full object-cover avatar">
+    <input type="file" ref="file" @change="changeAvatar" class="hidden">
 
-    <input type="file" ref="fileInput" @change="uploadAvatar" class="hidden">
-
-    <button @click="$refs.fileInput.click()" class="edit-btn">
+    <button @click="$refs.file.click()"
+      class="absolute bottom-0 right-0 bg-white/20 p-2 rounded-full">
       ✏️
     </button>
-
   </div>
 
-  <h2 class="mt-3 text-lg font-semibold">
-    {{user.name}}
-  </h2>
-
-  <p class="text-sm opacity-70">
-    {{user.bio || 'No bio yet'}}
-  </p>
+  <h2 class="mt-3 font-semibold">{{user.name}}</h2>
+  <p class="text-sm opacity-60">{{user.bio || 'No bio'}}</p>
 
 </div>
 
 <!-- FORM -->
-<div class="mt-6 space-y-4">
+<div class="mt-6 space-y-3">
 
-  <div>
-    <label class="text-xs opacity-60 ml-1">Name</label>
-    <input v-model="user.name"
-      class="input-glass w-full p-3 mt-1 rounded-xl outline-none">
-  </div>
+  <input v-model="user.name"
+    class="input w-full p-3 rounded-xl"
+    placeholder="Name">
 
-  <div>
-    <label class="text-xs opacity-60 ml-1">Bio</label>
-    <textarea v-model="user.bio"
-      class="input-glass w-full p-3 mt-1 rounded-xl outline-none">
-    </textarea>
-  </div>
+  <textarea v-model="user.bio"
+    class="input w-full p-3 rounded-xl"
+    placeholder="Bio"></textarea>
 
 </div>
 
-<!-- BUTTON -->
+<!-- ACTION -->
 <div class="mt-6 space-y-3">
 
-  <button @click="saveProfile"
-    class="btn-primary w-full py-3 rounded-xl font-semibold flex items-center justify-center gap-2">
+  <button @click="save"
+    :disabled="loading"
+    class="w-full bg-purple-600 py-3 rounded-xl">
 
-    <span v-if="loading">⏳ Saving...</span>
-    <span v-else>Save Changes</span>
+    <span v-if="loading">Saving...</span>
+    <span v-else>Save</span>
 
   </button>
 
   <button @click="logout"
-    class="btn-danger w-full py-3 rounded-xl font-semibold">
+    class="w-full bg-red-500 py-3 rounded-xl">
     Logout
   </button>
 
 </div>
 
 <!-- TOAST -->
-<div :class="['toast', showToast ? 'show' : '']">
-  {{toastMessage}}
+<div :class="['toast', showToast && 'show']">
+  {{toast}}
 </div>
 
 </div>
 
 <script>
-const WS_URL="wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
-
-if(!localStorage.getItem("user")){
-  parent.location.href="index.html"
-}
+const WS_URL = "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 
 Vue.createApp({
+
 data(){
 return{
 user: JSON.parse(localStorage.getItem("user")),
-showToast:false,
-toastMessage:"",
 ws:null,
-loading:false
+loading:false,
+toast:'',
+showToast:false,
+defaultAvatar:"https://ui-avatars.com/api/?name=User"
 }
 },
 
-async mounted(){
-  // 🔥 LOAD PROFILE DARI SERVER (INIT)
-  const res = await fetch(
-    "https://worker-chat.jihadwajib68.workers.dev/get-profile?email=" + this.user.email
-  )
+mounted(){
 
-  const data = await res.json()
-
-  if(data && data.email){
-    this.user = data
-    localStorage.setItem("user", JSON.stringify(this.user))
-  }
-
-  // 🔥 CONNECT WS
-  this.ws = new WebSocket(WS_URL)
-
-  this.ws.onopen = ()=>{
-    this.ws.send(JSON.stringify({
-      type:"online",
-      user:this.user.email
-    }))
-  }
-
-  // 🔥 LISTENER REALTIME
-  this.ws.onmessage = (e)=>{
-    const msg = JSON.parse(e.data)
-
-    if(msg.type==="profile_update"){
-      if(msg.user.email === this.user.email){
-
-        this.user = msg.user
-        localStorage.setItem("user", JSON.stringify(this.user))
-
-        this.showToastMsg("Profile updated realtime 🚀")
-      }
-    }
-  }
+this.connectWS()
 
 },
 
 methods:{
 
-showToastMsg(msg){
-  this.toastMessage = msg
-  this.showToast = true
+// ================= WS =================
+connectWS(){
 
-  setTimeout(()=>{
-    this.showToast = false
-  },2000)
+this.ws = new WebSocket(WS_URL)
+
+this.ws.onopen = ()=>{
+
+  // online presence
+  this.ws.send(JSON.stringify({
+    type:"online",
+    user:this.user.email
+  }))
+
+  // 🔥 GET PROFILE (NO FETCH)
+  this.ws.send(JSON.stringify({
+    type:"get_profile",
+    email:this.user.email
+  }))
+}
+
+this.ws.onmessage = (e)=>{
+  const msg = JSON.parse(e.data)
+
+  // INIT PROFILE
+  if(msg.type==="profile_data"){
+    if(!msg.user) return
+    this.user = msg.user
+    localStorage.setItem("user", JSON.stringify(this.user))
+  }
+
+  // UPDATE PROFILE (REALTIME)
+  if(msg.type==="profile_update"){
+    if(msg.user.email !== this.user.email) return
+
+    this.user = msg.user
+    localStorage.setItem("user", JSON.stringify(this.user))
+
+    this.loading = false
+    this.toastMsg("Profile updated ✅")
+  }
+}
+
+// 🔥 reconnect auto (important production)
+this.ws.onclose = ()=>{
+  setTimeout(()=>this.connectWS(),2000)
+}
+
 },
 
-async uploadAvatar(e){
-  const file = e.target.files[0]
-  if(!file) return
+// ================= ACTION =================
+save(){
 
-  const reader = new FileReader()
-  reader.onload = ()=>{
-    this.user.avatar = reader.result
-  }
-  reader.readAsDataURL(file)
+if(!this.ws || this.ws.readyState !== 1){
+  this.toastMsg("Connection lost ❌")
+  return
+}
 
-  this.showToastMsg("Avatar updated")
+this.loading = true
+
+this.ws.send(JSON.stringify({
+  type:"profile_update",
+  email:this.user.email,
+  name:this.user.name,
+  bio:this.user.bio,
+  avatar:this.user.avatar
+}))
+
 },
 
-async saveProfile(){
+changeAvatar(e){
 
-  this.loading = true
+const file = e.target.files[0]
+if(!file) return
 
-  // 🔥 SEND VIA WEBSOCKET (BUKAN FETCH)
-  if(this.ws && this.ws.readyState === 1){
-    this.ws.send(JSON.stringify({
-      type:"profile_update",
-      email:this.user.email,
-      name:this.user.name,
-      bio:this.user.bio,
-      avatar:this.user.avatar
-    }))
-    this.showToastMsg("Saving... 🚀")
-  } else {
-    this.showToastMsg("WebSocket not ready ❌")
-  }
-    
-  localStorage.setItem("user", JSON.stringify(this.user))
-  this.loading = false
+const reader = new FileReader()
+reader.onload = ()=>{
+  this.user.avatar = reader.result
+}
+reader.readAsDataURL(file)
+
 },
 
 logout(){
   localStorage.removeItem("user")
   parent.location.href="index.html"
+},
+
+// ================= UI =================
+toastMsg(msg){
+  this.toast = msg
+  this.showToast = true
+  setTimeout(()=>this.showToast=false,2000)
 }
 
 }

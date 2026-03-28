@@ -287,36 +287,35 @@ function showToast(msg){
 // 🔥 INIT FCM
 async function initFCM(){
 
-  alert("INIT FCM START")
+  const permission = await Notification.requestPermission()
 
-  try {
-
-    const permission = await Notification.requestPermission()
-    alert("PERMISSION: " + permission)
-
-    if(permission !== "granted"){
-      alert("NOTIF DITOLAK ❌")
-      return
-    }
-
-    const reg = await navigator.serviceWorker.ready
-    alert("SW READY ✅")
-
-    const token = await messaging.getToken({
-      vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0",
-      serviceWorkerRegistration: reg
-    })
-
-    if(!token){
-      alert("TOKEN NULL ❌")
-      return
-    }
-
-    alert("TOKEN: " + token)
-
-  } catch(e){
-    alert("ERROR FCM ❌: " + e.message)
+  if(permission !== "granted"){
+    console.log("notif ditolak")
+    return
   }
+
+  const reg = await navigator.serviceWorker.ready
+
+  const token = await messaging.getToken({
+    vapidKey: "YOUR_VAPID_KEY",
+    serviceWorkerRegistration: reg
+  })
+
+  if(!token){
+    console.log("TOKEN NULL")
+    return
+  }
+
+  console.log("TOKEN:", token)
+
+  await fetch(API + "/save-token", {
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      token,
+      email: user.email
+    })
+  })
 }
 
 //// 🔥 WEBSOCKET GLOBAL
@@ -361,15 +360,6 @@ ws.onmessage = (e)=>{
   requests.unshift(msg.data)
   updateBadge()
   renderRequests()
-}
-
-if(msg.type==="push_notification"){
-
-  if(Notification.permission === "granted"){
-    new Notification(msg.title, {
-      body: msg.body
-    })
-  }
 }
 
   if(msg.type === "contact_request"){

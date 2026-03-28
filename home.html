@@ -43,7 +43,7 @@ body {
 
 .active { color: #a78bfa; }
 
-/* POPUP ANIMATION */
+/* POPUP */
 .popup {
   animation: fadeIn 0.2s ease;
 }
@@ -64,17 +64,9 @@ body {
   padding: 10px 14px;
   border-radius: 12px;
   display: flex;
-  align-items: center;
   gap: 10px;
   z-index: 9999;
-  animation: toastIn 0.3s ease;
 }
-
-@keyframes toastIn {
-  from { opacity:0; transform:translate(-50%, -20px) }
-  to { opacity:1; transform:translate(-50%, 0) }
-}
-
 </style>
 </head>
 
@@ -99,15 +91,12 @@ if(!localStorage.getItem("user")){
       </div>
     </div>
 
-    <!-- 🔔 NOTIF -->
+    <!-- 🔔 -->
     <button onclick="toggleRequests()" class="relative text-xl">
-
       🔔
-
       <span id="notifBadge"
         class="absolute -top-1 -right-1 bg-red-500 text-[10px] px-1.5 rounded-full hidden">
       </span>
-
     </button>
   </div>
 
@@ -134,38 +123,67 @@ const frame = document.getElementById("frame")
 frame.src = "chats.html"
 
 // ================= WS =================
-let ws = new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
-
+let ws
 let requests = []
 
-ws.onopen = ()=>{
-  ws.send(JSON.stringify({
-    type:"init_requests",
-    user:user.email
-  }))
-}
+function connectWS(){
 
-ws.onmessage = (e)=>{
-  const msg = JSON.parse(e.data)
+  ws = new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
 
-  if(msg.type === "request_list"){
-    requests = msg.data || []
-    updateNotif()
+  ws.onopen = ()=>{
+    console.log("WS connected")
+
+    ws.send(JSON.stringify({
+      type:"online",
+      user:user.email
+    }))
+
+    ws.send(JSON.stringify({
+      type:"init_requests",
+      user:user.email
+    }))
   }
 
-  if(msg.type === "new_request"){
-    if(msg.data.to_email === user.email){
-      requests.unshift(msg.data)
+  ws.onmessage = (e)=>{
+    const msg = JSON.parse(e.data)
+
+    // INIT
+    if(msg.type === "request_list"){
+      requests = msg.data || []
       updateNotif()
-      showToast(msg.data.from_email)
+    }
+
+    // NEW
+    if(msg.type === "new_request"){
+      if(msg.data.to_email === user.email){
+        requests.unshift(msg.data)
+        updateNotif()
+        showToast(msg.data.from_email, "sent you a friend request")
+      }
+    }
+
+    // DELETE / UPDATE
+    if(msg.type === "request_update"){
+      requests = requests.filter(r => r.id !== msg.id)
+      updateNotif()
+    }
+
+    // ACCEPTED
+    if(msg.type === "request_accepted"){
+      if(msg.to === user.email){
+        showToast("🎉", "Friend accepted")
+      }
     }
   }
 
-  if(msg.type === "request_update"){
-    requests = requests.filter(r => r.id !== msg.id)
-    updateNotif()
+  ws.onclose = ()=>{
+    console.log("WS reconnecting...")
+    setTimeout(connectWS, 1000)
   }
+
 }
+
+connectWS()
 
 // ================= NAV =================
 function navigate(page, el){
@@ -203,11 +221,7 @@ function toggleRequests(){
   popup.className = "popup absolute right-4 top-20 w-72 rounded-xl bg-slate-900/95 border border-white/10 p-3 shadow-xl"
 
   if(requests.length === 0){
-    popup.innerHTML = `
-      <p class="text-sm opacity-60 text-center py-4">
-        No friend requests
-      </p>
-    `
+    popup.innerHTML = `<p class="text-sm opacity-60 text-center py-4">No requests</p>`
   }else{
     popup.innerHTML = requests.map(r=>`
 
@@ -239,22 +253,26 @@ function toggleRequests(){
   document.body.appendChild(popup)
 }
 
-// ================= RESPOND =================
-async function respond(id, action){
+// ================= RESPOND (FULL WS) =================
+function respond(id, action){
 
-  await fetch("https://worker-chat.jihadwajib68.workers.dev/respond-request",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({ id, action })
-  })
+  if(ws && ws.readyState === 1){
+    ws.send(JSON.stringify({
+      type:"respond_request",
+      id,
+      action
+    }))
+  }
 
+  // instant UI
   requests = requests.filter(r=>r.id !== id)
   updateNotif()
 
   document.getElementById("reqPopup")?.remove()
 }
 
-function showToast(email){
+// ================= TOAST =================
+function showToast(title, text){
 
   const old = document.getElementById("toast")
   if(old) old.remove()
@@ -264,25 +282,17 @@ function showToast(email){
   toast.className = "toast"
 
   toast.innerHTML = `
-    <img src="https://ui-avatars.com/api/?name=${email}"
-      class="w-8 h-8 rounded-full">
-
     <div>
-      <p class="text-sm font-semibold">${email}</p>
-      <p class="text-xs opacity-60">sent you a friend request</p>
+      <p class="text-sm font-semibold">${title}</p>
+      <p class="text-xs opacity-60">${text}</p>
     </div>
   `
-
-  toast.onclick = ()=>{
-    toggleRequests()
-    toast.remove()
-  }
 
   document.body.appendChild(toast)
 
   setTimeout(()=>{
     toast.remove()
-  }, 3000)
+  },3000)
 }
 </script>
 

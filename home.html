@@ -5,7 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 <link rel="manifest" href="/manifest.json">
 
 <style>
@@ -43,12 +42,6 @@ body {
 }
 
 .active { color: #a78bfa; }
-
-.chat-card {
-  background: rgba(255,255,255,0.05);
-  border-radius: 16px;
-  padding: 14px;
-}
 </style>
 </head>
 
@@ -74,60 +67,12 @@ if(!localStorage.getItem("user")){
     <button onclick="toggleRequests()">🔔</button>
   </div>
 
-  <!-- IFRAME -->
-  <iframe id="frame" class="hidden flex-1 w-full border-0"></iframe>
-
-  <!-- CHATS -->
-  <div id="app" class="flex-1 overflow-auto">
-
-    <div class="px-4 mt-4 text-xl">Chats</div>
-
-    <div class="px-4 mt-3">
-      <input v-model="search"
-        placeholder="Search..."
-        class="w-full p-3 rounded-xl bg-white/10">
-    </div>
-
-    <div class="px-4 mt-4">
-
-      <div v-for="c in chats"
-           @click="openChat(c)"
-           class="chat-card mb-3 flex justify-between cursor-pointer">
-
-        <div class="flex gap-3 items-center">
-
-          <img v-if="c.friend_avatar"
-            :src="c.friend_avatar"
-            class="w-10 h-10 rounded-full">
-
-          <div v-else class="w-10 h-10 rounded-full flex items-center justify-center bg-purple-600">
-            {{ getInitial(c.friend_name || c.friend_email) }}
-          </div>
-
-          <div>
-            <p>{{ c.friend_name || c.friend_email }}</p>
-            <p class="text-sm opacity-60">{{ c.last_message }}</p>
-          </div>
-        </div>
-
-        <div class="text-right">
-          <p class="text-xs opacity-50">{{ formatTime(c.updated_at) }}</p>
-
-          <div v-if="c.unread>0"
-            class="bg-red-500 text-xs px-2 rounded-full">
-            {{c.unread}}
-          </div>
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
+  <!-- CONTENT (FULL IFRAME) -->
+  <iframe id="frame" class="flex-1 w-full border-0"></iframe>
 
   <!-- NAVBAR -->
   <div class="navbar flex text-center text-xl">
-    <button onclick="navigate('chat', this)" class="nav-btn active">💬</button>
+    <button onclick="navigate('chats.html', this)" class="nav-btn active">💬</button>
     <button onclick="navigate('contacts.html', this)" class="nav-btn">👤</button>
     <button onclick="navigate('profile.html', this)" class="nav-btn">⚙️</button>
   </div>
@@ -141,84 +86,22 @@ document.getElementById("username").innerText = "Hi, " + user.name
 document.getElementById("avatar").src =
   user.avatar || "https://ui-avatars.com/api/?name=" + user.name
 
+const frame = document.getElementById("frame")
+
+// 🔥 DEFAULT LOAD
+frame.src = "chats.html"
+
 function navigate(page, el){
 
-  const frame = document.getElementById("frame")
-  const chat = document.getElementById("app")
-
+  // set active button
   document.querySelectorAll(".nav-btn")
     .forEach(b=>b.classList.remove("active"))
 
   el.classList.add("active")
 
-  if(page === "chat"){
-    chat.style.display = "block"
-    frame.classList.add("hidden")
-  }else{
-    chat.style.display = "none"
-    frame.classList.remove("hidden")
-    frame.src = page
-  }
+  // load page
+  frame.src = page
 }
-
-Vue.createApp({
-
-data(){
-return{
-user,
-chats:[],
-ws:null
-}
-},
-
-mounted(){
-
-this.ws = new WebSocket("wss://worker-chat.jihadwajib68.workers.dev/ws?room=global")
-
-this.ws.onopen = ()=>{
-  this.ws.send(JSON.stringify({
-    type:"init_chats",
-    user:this.user.email
-  }))
-}
-
-this.ws.onmessage = (e)=>{
-  const msg = JSON.parse(e.data)
-
-  if(msg.type === "init_chats"){
-    this.chats = msg.chats || []
-  }
-
-  if(msg.type === "message"){
-    this.ws.send(JSON.stringify({
-      type:"init_chats",
-      user:this.user.email
-    }))
-  }
-}
-
-},
-
-methods:{
-
-openChat(c){
-  localStorage.setItem("activeChat", JSON.stringify(c))
-  location.href = "chat.html"
-},
-
-getInitial(name){
-  return name.charAt(0).toUpperCase()
-},
-
-formatTime(t){
-  if(!t) return ''
-  const d=new Date(t)
-  return d.getHours()+':'+d.getMinutes()
-}
-
-}
-
-}).mount("#app")
 </script>
 
 </body>

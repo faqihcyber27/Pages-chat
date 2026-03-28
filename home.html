@@ -143,12 +143,140 @@ if(!localStorage.getItem("user")){
 
   </div>
 
-  <!-- CONTENT -->
-  <iframe id="frame" src="chats.html" class="flex-1 w-full border-0"></iframe>
+  <div id="app" class="h-full flex flex-col">
+
+<div class="px-4 mt-4 text-xl font-semibold">Chats</div>
+
+<div class="px-4 mt-3">
+  <input v-model="search"
+    placeholder="Search..."
+    class="w-full p-3 rounded-xl bg-white/10 border border-white/10">
+</div>
+
+<!-- 📌 PINNED -->
+<div v-if="pinnedChats.length" class="px-4 mt-4">
+  <p class="text-xs opacity-60 mb-2">📌 Pinned</p>
+
+  <div v-for="c in pinnedChats"
+     @click="openChat(c)"
+     class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer border border-yellow-400/20">
+
+    <div class="flex items-center gap-3">
+      <img v-if="c.friend_avatar"
+        :src="c.friend_avatar"
+        class="w-10 h-10 rounded-full object-cover">
+
+      <div v-else
+        :style="{ background: getColor(getName(c)) }"
+        class="w-10 h-10 rounded-full flex items-center justify-center">
+        {{ getInitial(getName(c)) }}
+      </div>
+
+      <div>
+        <p class="font-semibold flex items-center gap-2">
+          {{ getName(c) }}
+          <span v-if="isOnline(c.friend_email)"
+            class="w-2 h-2 bg-green-400 rounded-full"></span>
+          <span class="text-yellow-400 text-xs">📌</span>
+        </p>
+
+        <p class="text-sm opacity-60">
+          <span v-if="typingUsers[c.friend_email]" class="text-green-400">
+            sedang mengetik...
+          </span>
+          <span v-else-if="c.last_message">
+            {{c.last_message}}
+          </span>
+          <span v-else>No message</span>
+        </p>
+      </div>
+    </div>
+
+    <div class="text-right">
+      <p class="text-xs opacity-50">
+        {{formatTime(c.updated_at)}}
+      </p>
+
+      <button @click.stop="togglePin(c)"
+        class="text-yellow-400">⭐</button>
+
+      <div v-if="c.unread>0"
+        class="bg-red-500 text-xs px-2 rounded-full mt-1">
+        {{c.unread}}
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- LIST -->
+<div class="flex-1 overflow-auto px-4 mt-4">
+
+  <div v-for="c in normalChats"
+       @click="openChat(c)"
+       class="chat-card p-4 mb-3 rounded-2xl flex justify-between cursor-pointer">
+
+    <div class="flex items-center gap-3">
+
+      <img v-if="c.friend_avatar"
+        :src="c.friend_avatar"
+        class="w-10 h-10 rounded-full object-cover">
+
+      <div v-else
+        :style="{ background: getColor(getName(c)) }"
+        class="w-10 h-10 rounded-full flex items-center justify-center">
+        {{ getInitial(getName(c)) }}
+      </div>
+
+      <div>
+        <p class="font-semibold flex items-center gap-2">
+          {{ getName(c) }}
+          <span v-if="isOnline(c.friend_email)"
+            class="w-2 h-2 bg-green-400 rounded-full"></span>
+        </p>
+
+        <p class="text-sm"
+          :class="typingUsers[c.friend_email] ? 'text-green-400' : 'opacity-60'">
+
+          <span v-if="typingUsers[c.friend_email]">
+            sedang mengetik...
+          </span>
+
+          <span v-else-if="c.last_message">
+            {{c.last_message}}
+          </span>
+
+          <span v-else>No message</span>
+
+        </p>
+      </div>
+    </div>
+
+    <div class="text-right">
+      <p class="text-xs opacity-50">
+        {{formatTime(c.updated_at)}}
+      </p>
+
+      <button @click.stop="togglePin(c)"
+        :class="isPinned(c.friend_email)?'text-yellow-400':'opacity-40'">
+        ⭐
+      </button>
+
+      <div v-if="c.unread>0"
+        class="bg-red-500 text-xs px-2 rounded-full mt-1">
+        {{c.unread}}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+</div>
 
   <!-- NAVBAR -->
   <div class="navbar flex justify-around text-xl">
-    <button onclick="navigate('chats.html', this)" class="nav-btn active">💬</button>
+    <button onclick="navigate(this)" class="nav-btn active">💬</button>
     <button onclick="navigate('contacts.html', this)" class="nav-btn">👤</button>
     <button onclick="navigate('profile.html', this)" class="nav-btn">⚙️</button>
   </div>

@@ -3,8 +3,6 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="manifest" href="/manifest.json">
 
@@ -181,29 +179,6 @@ class="hidden fixed inset-0 flex items-center justify-center bg-black/70">
 const API="https://worker-chat.jihadwajib68.workers.dev"
 const user = JSON.parse(localStorage.getItem("user"))
 
-// 🔥 FIREBASE INIT
-const firebaseConfig = {
-  apiKey: "AIzaSyCASPxiCM8V8OIzw3JaeTdGreID0EMyTMk",
-  authDomain: "chat-realtime-7b092.firebaseapp.com",
-  projectId: "chat-realtime-7b092",
-  storageBucket: "chat-realtime-7b092.firebasestorage.app",
-  messagingSenderId: "424831780632",
-  appId: "1:424831780632:web:6e42d806ea94392778406d"
-}
-
-firebase.initializeApp(firebaseConfig)
-
-const messaging = firebase.messaging()
-messaging.onMessage((payload)=>{
-  console.log("NOTIF MASUK:", payload)
-
-  if(Notification.permission === "granted"){
-    new Notification(payload.notification.title, {
-      body: payload.notification.body
-    })
-  }
-})
-
 document.getElementById("username").innerText =
   "Hi, " + user.name
 
@@ -284,63 +259,10 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove("show"),2000)
 }
 
-// 🔥 INIT FCM
-async function initFCM(){
-
-  try {
-
-    const permission = await Notification.requestPermission()
-    console.log("PERMISSION:", permission)
-
-    if(permission !== "granted"){
-      alert("NOTIF DITOLAK ❌")
-      return
-    }
-
-    const reg = await navigator.serviceWorker.ready
-    console.log("SW READY")
-
-    const token = await messaging.getToken({
-      vapidKey: "BMicSwmyrhTRTPuFZO-S2pm3ymIZ43RT-KcnQnWw2Z0_TIwDPRLa1EZLPNiSiwkoKiDQxNt7cNJQD3f3iCCgwb0",
-      serviceWorkerRegistration: reg
-    })
-
-    if(!token){
-      alert("TOKEN NULL ❌")
-      return
-    }
-
-    console.log("TOKEN:", token)
-    alert("TOKEN ADA ✅")
-
-    const res = await fetch(API + "/save-token", {
-      method:"POST",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({
-        token,
-        email: user.email
-      })
-    })
-
-    const text = await res.text()
-    console.log("SAVE RESPONSE:", text)
-    alert("TOKEN DISIMPAN ✅")
-
-  } catch(e){
-    console.error(e)
-    alert("ERROR: " + e.message)
-  }
-}
-
 //// 🔥 WEBSOCKET GLOBAL
 const ws = new WebSocket(
   "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
-
-navigator.serviceWorker.register("/sw.js")
-.then(reg=>{
-  initFCM()
-})
 
 ws.onopen = ()=>{
   ws.send(JSON.stringify({

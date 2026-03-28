@@ -198,6 +198,14 @@ this.ws.onopen = ()=>{
 this.ws.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
+  if(msg.type === "force_reload_contacts"){
+    this.ws.send(JSON.stringify({
+      type:"init_contacts",
+      user:this.user.email
+    }))
+    return
+  }
+
   // INIT
   if(msg.type==="init_contacts"){
     this.contacts = msg.contacts || []
@@ -264,6 +272,8 @@ sendRequest(){
 },
 
 deleteContact(){
+  
+  if(!this.selectedContact) return
 
   this.ws.send(JSON.stringify({
     type:"delete_contact",

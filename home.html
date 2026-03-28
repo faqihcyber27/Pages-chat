@@ -9,266 +9,20 @@
 
 <style>
 body {background:#020617;color:white;}
-.glass {background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);}
-.header {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  position: relative;
-  overflow: hidden;
+.chat-card,.contact-card{
+  background:rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:16px;
 }
-
-/* 🔥 glow effect */
-.header::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.15), transparent 60%);
-  pointer-events: none;
+.search-bar{
+  background:rgba(255,255,255,0.08);
+  border:1px solid rgba(255,255,255,0.1);
 }
-
-/* 🔥 glass border */
-.header {
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+.bottom-nav{
+  background:rgba(255,255,255,0.06);
+  border:1px solid rgba(255,255,255,0.1);
 }
-
-.chat-card {
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-
-  border: 1px solid rgba(255,255,255,0.08);
-
-  box-shadow:
-    0 8px 24px rgba(0,0,0,0.25),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-
-  transform: translateY(0);
-}
-
-/* 🔥 hover effect */
-.chat-card:hover {
-  transform: translateY(-4px) scale(1.02);
-  box-shadow:
-    0 12px 30px rgba(0,0,0,0.35),
-    0 0 20px rgba(124,58,237,0.2);
-}
-
-.chat-card::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: linear-gradient(120deg, transparent, rgba(255,255,255,0.05), transparent);
-  opacity: 0;
-  transition: 0.3s;
-}
-
-.chat-card:hover::before {
-  opacity: 1;
-}
-
-.chat-card {
-  position: relative;
-  overflow: hidden;
-}
-
-.fab {
-  background: linear-gradient(135deg, #7c3aed, #4f46e5, #ec4899);
-  box-shadow:
-    0 10px 30px rgba(124,58,237,0.5),
-    0 0 20px rgba(236,72,153,0.3);
-
-  animation: pulse 2s infinite;
-  transition: 0.3s;
-}
-
-.fab:hover {
-  transform: scale(1.1);
-}
-
-/* 🔥 pulse */
-@keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(124,58,237,0.6); }
-  70% { box-shadow: 0 0 0 20px rgba(124,58,237,0); }
-  100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
-}
-
-.search-bar {
-  background: rgba(255,255,255,0.08);
-  backdrop-filter: blur(20px);
-
-  border: 1px solid rgba(255,255,255,0.1);
-
-  outline: none;
-  transition: 0.3s;
-}
-
-.search-bar:focus {
-  border-color: #7c3aed;
-  box-shadow: 0 0 15px rgba(124,58,237,0.4);
-}
-
-.bottom-nav {
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(20px);
-
-  border: 1px solid rgba(255,255,255,0.1);
-
-  box-shadow:
-    0 10px 30px rgba(0,0,0,0.4),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-}
-
-/* tombol */
-.nav-btn {
-  position: relative;
-  padding: 10px 16px;
-  border-radius: 12px;
-  transition: 0.3s;
-}
-
-/* aktif */
-.active-nav {
-  color: #a78bfa;
-}
-
-/* glow aktif */
-.active-nav::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: rgba(124,58,237,0.2);
-  filter: blur(10px);
-  z-index: -1;
-}
-
-/* 💎 MODAL GLASS */
-.glass-card {
-  background: rgba(255,255,255,0.06);
-  backdrop-filter: blur(25px);
-  -webkit-backdrop-filter: blur(25px);
-
-  border: 1px solid rgba(255,255,255,0.1);
-
-  box-shadow:
-    0 20px 50px rgba(0,0,0,0.5),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-
-  border-radius: 20px;
-}
-
-/* ✨ ANIMASI MASUK */
-@keyframes modalIn {
-  0% {
-    transform: scale(0.8) translateY(30px);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1) translateY(0);
-    opacity: 1;
-  }
-}
-
-.animate-modal {
-  animation: modalIn 0.3s ease;
-}
-
-/* 👆 ITEM INTERACTION */
-.start-item {
-  transition: 0.25s;
-  background: rgba(255,255,255,0.03);
-}
-
-.start-item:hover {
-  transform: scale(1.03);
-  background: rgba(255,255,255,0.08);
-}
-
-.start-item:active {
-  transform: scale(0.97);
-}
-
-/* 🔥 GLOW HALUS */
-.start-item::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: radial-gradient(circle, rgba(124,58,237,0.2), transparent 70%);
-  opacity: 0;
-  transition: 0.3s;
-}
-
-.start-item:hover::after {
-  opacity: 1;
-}
-
-/* IMPORTANT */
-.start-item {
-  position: relative;
-  overflow: hidden;
-}
-
-.contact-card {
-  background: rgba(255,255,255,0.05);
-  backdrop-filter: blur(18px);
-
-  border: 1px solid rgba(255,255,255,0.08);
-
-  box-shadow:
-    0 8px 25px rgba(0,0,0,0.3),
-    inset 0 1px 0 rgba(255,255,255,0.05);
-
-  transition: 0.3s;
-  position: relative;
-  overflow: hidden;
-}
-
-.contact-card:hover {
-  transform: scale(1.02);
-  box-shadow:
-    0 12px 30px rgba(0,0,0,0.4),
-    0 0 20px rgba(124,58,237,0.2);
-}
-
-.contact-card::before {
-  content:"";
-  position:absolute;
-  inset:0;
-  background: radial-gradient(circle, rgba(124,58,237,0.2), transparent 70%);
-  opacity:0;
-  transition:0.3s;
-}
-
-.contact-card:hover::before {
-  opacity:1;
-}
-
-.action-btn {
-  background: rgba(255,255,255,0.08);
-  padding: 6px 8px;
-  border-radius: 10px;
-  transition: 0.2s;
-}
-
-.action-btn:hover {
-  background: rgba(255,255,255,0.15);
-  transform: scale(1.1);
-}
-
-/* PROFILE EFFECT */
-input:focus, textarea:focus {
-  box-shadow: 0 0 15px rgba(124,58,237,0.4);
-}
-
-/* BUTTON PRESS */
-button:active {
-  transform: scale(0.96);
-}
-
-.active {color:#a78bfa;}
+.active-nav{color:#a78bfa;}
 </style>
 </head>
 
@@ -277,18 +31,13 @@ button:active {
 <div id="app" class="h-screen flex flex-col">
 
 <!-- HEADER -->
-<div class="header p-5 flex justify-between items-center shadow-lg backdrop-blur-xl rounded-b-2xl mx-2 mt-2">
+<div class="p-4 flex justify-between items-center">
   <div>
-    <h1 class="text-lg font-semibold drop-shadow">Hi, {{user.name}}</h1>
-    <p class="text-sm opacity-70">Welcome back</p>
+    <h1 class="font-semibold">Hi, {{user.name}}</h1>
   </div>
 
   <div class="relative">
-    <button @click="showRequests=true" class="text-2xl relative transition hover:scale-110">
-      🔔
-      <!-- glow -->
-      <span class="absolute inset-0 rounded-full blur-md bg-purple-500/30 -z-10"></span>
-    </button>
+    <button @click="showRequests=true">🔔</button>
     <span v-if="requests.length"
       class="absolute -top-2 -right-2 bg-red-500 text-xs px-1 rounded-full">
       {{requests.length}}
@@ -299,443 +48,93 @@ button:active {
 <!-- CONTENT -->
 <div class="flex-1 overflow-auto p-4">
 
-  <!-- ===== CHATS ===== -->
-  <div v-if="tab==='chats'">
+<!-- CHATS -->
+<div v-if="tab==='chats'">
 
-    <div class="text-xl font-semibold mb-3">Chats</div>
+<input v-model="search"
+placeholder="Search..."
+class="search-bar w-full p-3 rounded-xl mb-4">
 
-    <div class="relative mb-4">
-
-  <!-- ICON -->
-  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-white/50">
-    🔍
-  </span>
-
-  <input v-model="search"
-    placeholder="Search chat..."
-    class="search-bar w-full pl-10 pr-4 py-3 rounded-full text-sm">
-
+<div v-if="filteredChats.length===0"
+class="text-center opacity-50 mt-10">
+No chats
 </div>
 
-    <div v-if="filteredChats.length===0" class="text-center mt-20 opacity-60">
-      No chats yet
-    </div>
+<div v-for="c in filteredChats"
+:key="getFriendEmail(c)"
+@click="openChat(c)"
+class="chat-card p-3 mb-3 flex justify-between cursor-pointer">
 
-    <!-- CHAT LIST -->
-    <div v-for="c in filteredChats"
-         @click="openChat(c)"
-         @touchstart="startChatPress(c)"
-         @touchend="cancelPress"
-         class="chat-card p-4 mb-3 rounded-2xl flex justify-between items-center cursor-pointer transition-all duration-300">
+<div class="flex gap-3 items-center">
 
-      <!-- LEFT -->
-      <div class="flex items-center gap-3">
-
-        <!-- ADA AVATAR -->
-        <img v-if="c.friend_avatar"
-          :src="c.friend_avatar" class="w-10 h-10 rounded-full object-cover shadow-md ring-1 ring-white/10">
-
-        <!-- TIDAK ADA AVATAR -->
-        <div v-else
-          :style="{ background: getColor(getName(c)) }" class="w-10 h-10 rounded-full flex items-center justify-center font-semibold text-white">
-
-          {{ getInitial(getName(c)) }}
-        </div>
-
-        <div>
-
-          <!-- 🔥 NAME + ONLINE -->
-          <p class="font-semibold flex items-center gap-2">
-
-          <!-- NORMAL -->
-          <span v-else>
-          {{c.friend_name || (c.user1===user.email?c.user2:c.user1)}}
-          </span>
-
-          <!-- ONLINE DOT -->
-
-            <span v-if="onlineUsers.includes(getFriendEmail(c))"
-              class="w-2 h-2 bg-green-400 rounded-full"></span>
-          </p>
-
-          <p class="text-sm truncate max-w-[180px]"
-   :class="typingUsers[getFriendEmail(c)] ? 'text-green-400' : 'opacity-50'">
-
-  <!-- TYPING -->
-  <span v-if="typingUsers[getFriendEmail(c)]">
-    sedang mengetik...
-  </span>
-
-  <!-- 📷 FOTO -->
-  <span v-else-if="
-    (c.last_file_type && c.last_file_type.includes('image')) ||
-    c.last_message === '📷 Foto'
-  ">
-    📷 Foto
-  </span>
-
-  <!-- 📎 FILE -->
-  <span v-else-if="
-    c.last_file_type ||
-    c.last_message === '📎 File'
-  ">
-    📎 File
-  </span>
-
-  <!-- 💬 TEXT -->
-  <span v-else-if="c.last_message">
-    {{c.last_message}}
-    <span class="ml-1 text-xs">
-      <span v-if="c.unread==0">✓✓</span>
-      <span v-else>✓</span>
-    </span>
-  </span>
-
-  <!-- DEFAULT -->
-  <span v-else>
-    No message
-  </span>
-
-</p>
-        </div>
-
-      </div>
-
-      <!-- RIGHT -->
-      <div class="text-right">
-
-        <p class="text-xs opacity-50">
-          {{ formatTime(c.updated_at) }}
-        </p>
-
-        <div v-if="c.unread > 0"
-             class="bg-red-500/90 text-xs px-2 py-1 rounded-full mt-1 shadow-md">
-          {{c.unread}}
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-  <!-- ===== CONTACTS ===== -->
-  <div v-if="tab==='contacts'">
-
-  <div class="text-xl font-semibold mb-3">Contacts</div>
-
-  <!-- PINNED -->
-  <div v-if="favorites.length" class="mb-4">
-    <p class="text-sm opacity-60 mb-2">⭐ Pinned</p>
-
-    <div v-for="c in favorites"
-         class="contact-card p-3 mb-2 rounded-xl flex justify-between">
-
-      <span>{{c.name}}</span>
-
-      <button @click="startChat(c)">💬</button>
-
-    </div>
-  </div>
-
-  <!-- SEARCH -->
-  <div class="relative mb-4">
-    <span class="absolute left-4 top-1/2 -translate-y-1/2 opacity-50">🔍</span>
-
-    <input v-model="search"
-      placeholder="Search contacts..."
-      class="search-bar w-full pl-10 pr-10 py-3 rounded-full">
-
-    <button v-if="search"
-      @click="search=''"
-      class="absolute right-4 top-1/2 -translate-y-1/2 opacity-60">
-      ✖
-    </button>
-  </div>
-
-  <!-- EMPTY -->
-  <div v-if="filteredContacts.length===0 && favorites.length===0"
-       class="text-center mt-20 opacity-60 space-y-4">
-
-    <p>No contacts yet</p>
-
-    <div class="glass p-4 rounded-xl">
-      <p class="font-semibold">People you may know</p>
-      <p class="text-xs opacity-50">Coming soon</p>
-    </div>
-
-    <div class="glass p-4 rounded-xl">
-      <p class="font-semibold">Recently contacted</p>
-      <p class="text-xs opacity-50">Coming soon</p>
-    </div>
-
-  </div>
-
-  <!-- CONTACT LIST -->
-  <div v-for="c in filteredContacts"
-       @click="startChat(c)"
-       @touchstart="startPress(c)"
-       @touchend="cancelPress"
-       class="contact-card p-3 mb-3 rounded-2xl flex items-center justify-between">
-
-    <div class="flex items-center gap-3">
-
-      <img :src="c.avatar || 'https://i.pravatar.cc/40'"
-        class="w-10 h-10 rounded-full">
-
-      <div>
-        <p class="font-medium flex items-center gap-2">
-          {{c.name}}
-
-          <span v-if="isOnline(c.email)"
-            class="text-[10px] bg-green-500/20 text-green-400 px-2 py-[2px] rounded-full">
-            🟢 Online
-          </span>
-
-          <span v-else class="text-[10px] opacity-50">
-            🕒 {{ getLastSeen(c.email) ? formatTime(getLastSeen(c.email)) : 'offline' }}
-          </span>
-        </p>
-
-        <p class="text-xs opacity-50 truncate max-w-[150px]">
-          {{ c.bio || 'Available' }}
-        </p>
-      </div>
-
-    </div>
-
-    <!-- ACTION -->
-    <div class="flex gap-2">
-
-      <button @click.stop="startChat(c)" class="action-btn">💬</button>
-
-      <button @click.stop="alert('Call soon')" class="action-btn">📞</button>
-
-      <button @click.stop="viewProfile(c)" class="action-btn">👁</button>
-
-      <button @click.stop="toggleFav(c)"
-        :class="favorites.find(f=>f.email===c.email) ? 'text-yellow-400' : 'opacity-50'">
-        ⭐
-      </button>
-
-    </div>
-
-  </div>
-
+<div class="w-10 h-10 rounded-full flex items-center justify-center"
+:style="{background:getColor(getName(c))}">
+{{getInitial(getName(c))}}
 </div>
 
-<!-- ===== PROFILE PREMIUM ===== -->
-<div v-if="tab==='profile'" class="relative">
-
-  <!-- HERO -->
-  <div class="relative flex flex-col items-center justify-center py-8 mb-6">
-
-    <!-- BACKGROUND GLOW -->
-    <div class="absolute inset-0 bg-gradient-to-br from-purple-600/30 via-indigo-500/20 to-pink-500/30 blur-2xl rounded-3xl"></div>
-
-    <!-- AVATAR -->
-    <img :src="user.avatar || 'https://i.pravatar.cc/150'"
-         class="w-28 h-28 rounded-full object-cover border border-white/20 shadow-xl z-10">
-
-    <!-- NAME -->
-    <h2 class="mt-3 text-lg font-semibold z-10">
-      {{user.name}}
-    </h2>
-
-    <!-- BIO -->
-    <p class="text-sm opacity-70 z-10 text-center max-w-[250px]">
-      {{user.bio || 'No bio yet'}}
-    </p>
-
-    <!-- EDIT FLOAT -->
-    <input type="file" ref="fileInput" @change="uploadAvatar" class="hidden">
-
-    <button @click="$refs.fileInput.click()"
-      class="absolute top-3 right-3 bg-white/10 backdrop-blur p-2 rounded-full hover:scale-110 transition">
-      ✏️
-    </button>
-
-  </div>
-
-  <!-- INPUT -->
-  <div class="px-4">
-
-    <!-- NAME -->
-    <div class="mb-4">
-      <label class="text-xs opacity-60 ml-1">Name</label>
-      <input v-model="user.name"
-        class="w-full mt-1 p-3 rounded-xl bg-white/10 backdrop-blur border border-white/10 focus:border-purple-500 outline-none transition">
-    </div>
-
-    <!-- BIO -->
-    <div class="mb-4">
-      <label class="text-xs opacity-60 ml-1">Bio</label>
-      <textarea v-model="user.bio"
-        class="w-full mt-1 p-3 rounded-xl bg-white/10 backdrop-blur border border-white/10 focus:border-purple-500 outline-none transition">
-      </textarea>
-    </div>
-
-  </div>
-
-  <!-- SAVE BUTTON -->
-  <div class="fixed bottom-24 left-0 w-full px-4">
-
-    <button @click="saveProfile"
-      class="w-full py-3 rounded-2xl font-semibold text-white
-      bg-gradient-to-r from-purple-600 via-indigo-500 to-pink-500
-      shadow-lg shadow-purple-500/30
-      hover:scale-[1.02] active:scale-95 transition">
-
-      Save Changes
-    </button>
-
-  </div>
-
-</div>
-
-<!-- FLOAT BUTTON -->
-<button v-if="tab==='chats' || tab==='contacts'"
-  @click="showSelectChat=true"
-  class="fab fixed bottom-24 right-6 w-16 h-16 rounded-full flex items-center justify-center text-3xl">
-  +
-</button>
-
-<!-- BOTTOM NAV -->
-<div class="bottom-nav fixed bottom-3 left-1/2 -translate-x-1/2 w-[90%] flex justify-around py-3 text-xl rounded-2xl">
-  <button @click="tab='chats'" :class="['nav-btn', tab==='chats' ? 'active-nav' : '']">💬</button>
-  <button @click="tab='contacts'" :class="['nav-btn', tab==='contacts' ? 'active-nav' : '']">👤</button>
-  <button @click="tab='profile'" :class="['nav-btn', tab==='profile' ? 'active-nav' : '']">⚙️</button>
-</div>
-
-<!-- ADD FRIEND -->
-<!-- ADD FRIEND -->
-<div v-if="showModal"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-80">
-
-<h2 class="mb-3">Add Friend</h2>
-
-<input v-model="friendEmail"
-placeholder="Email"
-class="w-full p-2 mb-3 bg-white/10 rounded">
-
-<div class="flex gap-2">
-
-  <!-- SEND -->
-  <button @click="sendRequest"
-  class="bg-purple-600 flex-1 p-2 rounded">
-  Send
-  </button>
-
-  <!-- CLOSE -->
-  <button @click="showModal=false"
-  class="bg-gray-600 flex-1 p-2 rounded">
-  Close
-  </button>
-
-</div>
-
-</div>
-</div>
-
-<!-- REQUEST POPUP -->
-<div v-if="showRequests"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-80">
-
-<h2 class="mb-3">Requests</h2>
-
-<div v-for="r in requests" class="mb-3">
-
-<p>{{r.from_email}}</p>
-
-<div class="flex gap-2 mt-2">
-<button @click="respond(r.id,'accept')" class="bg-green-500 px-2 rounded">Accept</button>
-<button @click="respond(r.id,'reject')" class="bg-red-500 px-2 rounded">Reject</button>
-</div>
-
-</div>
-
-<button @click="showRequests=false"
-class="mt-3 w-full bg-gray-600 p-2 rounded">
-Close
-</button>
-
-</div>
-</div>
-
-<!-- DELETE CONTACT -->
-<div v-if="selectedContact"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-72 text-center">
-
-<p class="mb-4">Delete {{selectedContact.name}}?</p>
-
-<div class="flex gap-2">
-<button @click="deleteContact"
-class="bg-red-500 flex-1 p-2 rounded">Delete</button>
-
-<button @click="selectedContact=null"
-class="bg-gray-600 flex-1 p-2 rounded">Cancel</button>
-</div>
-
-</div>
-</div>
-
-<!-- DELETE CHAT -->
-<div v-if="selectedChat"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-72 text-center">
-
-<p class="mb-4">
-Delete chat with {{selectedChat.friend_name}}?
+<div>
+<p class="font-semibold">
+{{getName(c)}}
 </p>
 
-<div class="flex gap-2">
-<button @click="deleteChat"
-class="bg-red-500 flex-1 p-2 rounded">
-Delete
-</button>
-
-<button @click="selectedChat=null"
-class="bg-gray-600 flex-1 p-2 rounded">
-Cancel
-</button>
+<p class="text-sm opacity-60">
+{{c.last_message || 'No message'}}
+</p>
 </div>
 
 </div>
+
+<div class="text-right">
+<p class="text-xs opacity-50">
+{{formatTime(c.updated_at)}}
+</p>
+
+<div v-if="c.unread>0"
+class="bg-red-500 text-xs px-2 rounded-full">
+{{c.unread}}
 </div>
-
-<!-- START CHAT -->
-<div v-if="showSelectChat"
-class="fixed inset-0 bg-black/60 flex items-center justify-center">
-
-<div class="glass p-5 rounded-xl w-80 max-h-[400px] overflow-auto">
-
-<h2 class="mb-4 text-lg font-semibold tracking-wide">Start Chat
-</h2>
-
-<div v-for="c in contacts"
-     @click="startChat(c)"
-     class="start-item flex items-center gap-3 p-3 rounded-xl cursor-pointer">
-
-  <img :src="c.avatar || 'https://i.pravatar.cc/40'"
-     class="w-10 h-10 rounded-full">
-
-  <p>{{c.name}}</p>
+</div>
 
 </div>
 
-<button @click="showSelectChat=false"
-class="mt-4 w-full py-2 rounded-xl bg-white/10 backdrop-blur hover:bg-white/20 transition">
-Close
-</button>
+</div>
+
+<!-- CONTACTS -->
+<div v-if="tab==='contacts'">
+
+<input v-model="search"
+placeholder="Search..."
+class="search-bar w-full p-3 rounded-xl mb-4">
+
+<div v-for="c in filteredContacts"
+:key="c.email"
+@click="startChat(c)"
+class="contact-card p-3 mb-3 flex justify-between cursor-pointer">
+
+<div class="flex gap-3 items-center">
+<img :src="c.avatar || 'https://i.pravatar.cc/40'"
+class="w-10 h-10 rounded-full">
+
+<p>{{c.name}}</p>
+</div>
+
+<button @click.stop="startChat(c)">💬</button>
 
 </div>
+
+</div>
+
+</div>
+
+<!-- NAV -->
+<div class="bottom-nav fixed bottom-3 left-1/2 -translate-x-1/2 w-[90%] flex justify-around py-3 rounded-2xl">
+
+<button @click="tab='chats'"
+:class="tab==='chats'?'active-nav':''">💬</button>
+
+<button @click="tab='contacts'"
+:class="tab==='contacts'?'active-nav':''">👤</button>
+
 </div>
 
 </div>
@@ -744,42 +143,32 @@ Close
 const API="https://worker-chat.jihadwajib68.workers.dev"
 
 Vue.createApp({
+
 data(){
 return{
 user:{},
 tab:'chats',
 contacts:[],
 chats:[],
-favorites:[],
 requests:[],
 search:'',
-showModal:false,
 showRequests:false,
-showSelectChat:false,
-friendEmail:'',
-selectedContact:null,
-selectedChat:null,
-pressTimer:null,
-imagePreview: null,
 
 onlineUsers:[],
-typingUsers:{},
 ws:null
 }
 },
 
 computed:{
 filteredChats(){
-  return this.chats.filter(c=>{
-    const name = (c.friend_name || (c.user1===this.user.email?c.user2:c.user1)).toLowerCase()
-    return name.includes(this.search.toLowerCase())
-  })
+return this.chats.filter(c=>
+this.getName(c).toLowerCase().includes(this.search.toLowerCase())
+)
 },
-
 filteredContacts(){
-  return this.contacts.filter(c =>
-    c.name?.toLowerCase().includes(this.search.toLowerCase())
-  )
+return this.contacts.filter(c=>
+c.name?.toLowerCase().includes(this.search.toLowerCase())
+)
 }
 },
 
@@ -788,113 +177,60 @@ mounted(){
 this.user = JSON.parse(localStorage.getItem("user"))
 
 this.ws = new WebSocket(
-  "wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
+"wss://worker-chat.jihadwajib68.workers.dev/ws?room=global"
 )
 
 this.ws.onopen = ()=>{
-
-  // ONLINE
-  this.ws.send(JSON.stringify({
-    type:"online",
-    user:this.user.email
-  }))
-
-  // INIT DATA
-  this.ws.send(JSON.stringify({
-    type:"init_chats",
-    user:this.user.email
-  }))
-
-  this.ws.send(JSON.stringify({
-    type:"init_contacts",
-    user:this.user.email
-  }))
-
-  this.ws.send(JSON.stringify({
-    type:"init_requests",
-    user:this.user.email
-  }))
+this.ws.send(JSON.stringify({type:"online",user:this.user.email}))
+this.ws.send(JSON.stringify({type:"init_chats",user:this.user.email}))
+this.ws.send(JSON.stringify({type:"init_contacts",user:this.user.email}))
+this.ws.send(JSON.stringify({type:"init_requests",user:this.user.email}))
 }
 
 this.ws.onmessage = (e)=>{
-  const msg = JSON.parse(e.data)
+const msg = JSON.parse(e.data)
 
-  // ================= CHATS =================
-  if(msg.type === "init_chats"){
-    this.chats = msg.chats || []
-  }
+// INIT
+if(msg.type==="init_chats") this.chats = msg.chats || []
+if(msg.type==="init_contacts") this.contacts = msg.contacts || []
+if(msg.type==="request_list") this.requests = msg.data || []
+if(msg.type==="online_list") this.onlineUsers = msg.users || []
 
-  if(msg.type === "message"){
-    const messageText = msg.text || "📎 File"
+// REALTIME CHAT
+if(msg.type==="message"){
 
-    let friend = msg.sender === this.user.email
-      ? msg.room.split("_").find(x=>x!==this.user.email)
-      : msg.sender
+const text = msg.text || "📎 File"
 
-    const chat = this.chats.find(c=>c.friend_email===friend)
+const friend = msg.sender===this.user.email
+? msg.room.split("_").find(x=>x!==this.user.email)
+: msg.sender
 
-    if(chat){
-      chat.last_message = messageText
-      chat.updated_at = msg.created_at
+let chat = this.chats.find(c=>this.getFriendEmail(c)===friend)
 
-      if(msg.sender !== this.user.email){
-        chat.unread = (chat.unread||0)+1
-      }
+if(chat){
+chat.last_message = text
+chat.updated_at = msg.created_at
 
-      this.chats = [
-        chat,
-        ...this.chats.filter(x=>x.friend_email!==friend)
-      ]
+if(msg.sender!==this.user.email){
+chat.unread = (chat.unread||0)+1
+}
 
-    }else{
-      // fallback
-      this.ws.send(JSON.stringify({
-        type:"init_chats",
-        user:this.user.email
-      }))
-    }
-  }
+this.chats = [
+{...chat},
+...this.chats.filter(c=>this.getFriendEmail(c)!==friend)
+]
 
-  // ================= CONTACTS =================
-  if(msg.type === "init_contacts"){
-    this.contacts = msg.contacts || []
-  }
+}else{
+this.chats.unshift({
+friend_email:friend,
+friend_name:friend,
+last_message:text,
+updated_at:msg.created_at,
+unread: msg.sender!==this.user.email?1:0
+})
+}
 
-  if(msg.type === "contact_update"){
-    this.ws.send(JSON.stringify({
-      type:"init_contacts",
-      user:this.user.email
-    }))
-  }
-
-  // ================= REQUEST =================
-  if(msg.type === "request_list"){
-    this.requests = msg.data || []
-  }
-
-  if(msg.type === "new_request"){
-    if(msg.data.to_email === this.user.email){
-      this.requests.unshift(msg.data)
-    }
-  }
-
-  if(msg.type === "request_update"){
-    this.requests = this.requests.filter(r=>r.id !== msg.id)
-  }
-
-  // ================= ONLINE =================
-  if(msg.type === "online_list"){
-    this.onlineUsers = msg.users || []
-  }
-
-  // ================= TYPING =================
-  if(msg.type === "typing"){
-    this.typingUsers[msg.sender] = true
-
-    setTimeout(()=>{
-      delete this.typingUsers[msg.sender]
-    },1000)
-  }
+}
 
 }
 
@@ -902,125 +238,54 @@ this.ws.onmessage = (e)=>{
 
 methods:{
 
-// ================= ACTION =================
-
-async sendRequest(){
-await fetch(API+"/send-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-from_email:this.user.email,
-to_email:this.friendEmail
-})
-})
-
-// refresh via WS
-this.ws.send(JSON.stringify({
-  type:"init_requests",
-  user:this.user.email
-}))
-
-this.showModal=false
+getFriendEmail(c){
+return c.friend_email || (c.user1===this.user.email ? c.user2 : c.user1)
 },
-
-async respond(id,action){
-await fetch(API+"/respond-request",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({id,action})
-})
-
-// refresh WS
-this.ws.send(JSON.stringify({
-  type:"init_requests",
-  user:this.user.email
-}))
-},
-
-async deleteContact(){
-await fetch(API+"/delete-contact",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-user_email:this.user.email,
-friend_email:this.selectedContact.email
-})
-})
-
-this.selectedContact=null
-
-this.ws.send(JSON.stringify({
-  type:"init_contacts",
-  user:this.user.email
-}))
-},
-
-// ================= CHAT =================
-
-openChat(c){
-
-const email = c.friend_email || (c.user1===this.user.email?c.user2:c.user1)
-const room = [this.user.email, email].sort().join("_")
-
-fetch(API+"/mark-read",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-  room:room,
-  user:this.user.email
-})
-})
-
-c.unread = 0
-
-localStorage.setItem("activeChat", JSON.stringify({
-  email: c.friend_email,
-  name: c.friend_name,
-  avatar: c.friend_avatar,
-  bio: c.friend_bio,
-  last_seen: c.friend_last_seen
-}))
-
-window.location.href="chat.html"
-},
-
-startChat(c){
-localStorage.setItem("activeChat", JSON.stringify({
-  email: c.email,
-  name: c.name
-}))
-window.location.href="chat.html"
-},
-
-// ================= UI =================
 
 getName(c){
-  return c.friend_name || (c.user1===this.user.email ? c.user2 : c.user1)
+return c.friend_name || this.getFriendEmail(c)
 },
 
-getInitial(name){
-  return name?.charAt(0).toUpperCase()
+getInitial(n){
+return n?.charAt(0).toUpperCase()
 },
 
-isOnline(email){
-  return this.onlineUsers.includes(email)
+getColor(n){
+const colors=["#7c3aed","#4f46e5","#059669","#dc2626"]
+let h=0
+for(let i=0;i<n.length;i++){
+h=n.charCodeAt(i)+((h<<5)-h)
+}
+return colors[Math.abs(h)%colors.length]
 },
 
 formatTime(t){
+if(!t) return ''
 return new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})
 },
 
-startChatPress(c){
-this.pressTimer=setTimeout(()=>{
-  this.selectedChat=c
-},600)
+openChat(c){
+
+const email = this.getFriendEmail(c)
+
+localStorage.setItem("activeChat",JSON.stringify({
+email,
+name:this.getName(c)
+}))
+
+location.href="chat.html"
 },
 
-cancelPress(){
-clearTimeout(this.pressTimer)
+startChat(c){
+localStorage.setItem("activeChat",JSON.stringify({
+email:c.email,
+name:c.name
+}))
+location.href="chat.html"
 }
 
 }
+
 }).mount("#app")
 </script>
 

@@ -108,18 +108,43 @@ body {background:#020617;color:white;}
            @click="openChat(c)"
            class="chat-card p-4 mb-3 flex justify-between cursor-pointer">
 
-        <div>
-          <p>{{ getName(c) }}</p>
-          <p class="text-sm opacity-60">
-            <span v-if="typingUsers[c.friend_email]" class="text-green-400">
-              sedang mengetik...
-            </span>
-            <span v-else>{{c.last_message}}</span>
-          </p>
+        <div class="flex items-center gap-3">
+
+          <img v-if="c.friend_avatar"
+            :src="c.friend_avatar"
+            class="w-10 h-10 rounded-full">
+
+          <div v-else
+            :style="{ background: getColor(getName(c)) }"
+            class="w-10 h-10 rounded-full flex items-center justify-center">
+            {{ getInitial(getName(c)) }}
+          </div>
+
+          <div>
+            <p class="font-semibold">
+              {{ getName(c) }}
+              <span v-if="isOnline(c.friend_email)" class="text-green-400">●</span>
+            </p>
+
+            <p class="text-sm"
+              :class="typingUsers[c.friend_email]?'text-green-400':'opacity-60'">
+
+              <span v-if="typingUsers[c.friend_email]">
+                sedang mengetik...
+              </span>
+
+              <span v-else>
+                {{c.last_message}}
+              </span>
+
+            </p>
+          </div>
+
         </div>
 
-        <div>
-          <span v-if="c.unread>0" class="bg-red-500 px-2 rounded-full">
+        <div class="text-right">
+          <span v-if="c.unread>0"
+            class="bg-red-500 px-2 rounded-full text-xs">
             {{c.unread}}
           </span>
         </div>
@@ -169,7 +194,7 @@ user: JSON.parse(localStorage.getItem("user")),
 tab:'chats',
 
 chats:[],
-chatMap:{}, // 🔥 NEW
+chatMap:{},
 
 contacts:[],
 onlineUsers:[],
@@ -210,7 +235,7 @@ this.wsGlobal.onopen = ()=>{
 this.wsGlobal.onmessage = (e)=>{
   const msg = JSON.parse(e.data)
 
-  // 🔥 INIT (MERGE, BUKAN REPLACE)
+  // INIT (MERGE)
   if(msg.type==="init_chats"){
 
     ;(msg.chats || []).forEach(c=>{
@@ -234,7 +259,6 @@ this.wsGlobal.onmessage = (e)=>{
 
 methods:{
 
-// 🔥 CORE SYNC
 syncChats(){
 
   let arr = Object.values(this.chatMap)
@@ -267,7 +291,7 @@ const ws = new WebSocket(
 ws.onmessage = (e)=>{
 const msg = JSON.parse(e.data)
 
-// 🔥 TYPING
+// typing
 if(msg.type==="typing"){
   if(msg.sender===this.user.email) return
 
@@ -283,7 +307,7 @@ if(msg.type==="typing"){
   },1000)
 }
 
-// 🔥 MESSAGE REALTIME (NO RELOAD)
+// message realtime
 if(msg.type==="message"){
 
   const messageText = msg.text || "📎 File"
@@ -337,7 +361,7 @@ togglePin(c){
 
   localStorage.setItem("pinned", JSON.stringify(this.pinned))
 
-  this.syncChats() // 🔥 langsung update UI
+  this.syncChats()
 },
 
 openChat(c){

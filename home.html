@@ -155,12 +155,18 @@ function connectWS(){
 
     // NEW
     if(msg.type === "new_request"){
-      if(msg.data.to_email === user.email){
-        requests.unshift(msg.data)
-        updateNotif()
-        showToast(msg.data.from_email, "sent you a friend request")
-      }
-    }
+
+  if(msg.data.to_email === user.email){
+
+    // 🔥 anti duplicate
+    if(requests.find(r=>r.id === msg.data.id)) return
+
+    requests.unshift(msg.data)
+
+    updateNotif()
+    showToast(msg.data.from_email, "sent you a friend request")
+  }
+}
 
     // DELETE / UPDATE
     if(msg.type === "request_update"){
@@ -170,10 +176,15 @@ function connectWS(){
 
     // ACCEPTED
     if(msg.type === "request_accepted"){
-      if(msg.to === user.email){
-        showToast("🎉", "Friend accepted")
-      }
-    }
+
+  if(msg.to === user.email){
+    showToast("🎉", "You are now connected")
+  }
+
+  if(msg.from === user.email){
+    showToast("✅", "Request accepted")
+  }
+}
   }
 
   ws.onclose = ()=>{

@@ -237,6 +237,67 @@ this.wsGlobal.onmessage = (e)=>{
     return
   }
 
+  // MESSAGE
+  if(msg.type==="message"){
+
+  if(!msg.room) return
+
+  const [u1,u2] = msg.room.split("||")
+
+  // 🔥 pastikan message milik user ini
+  if(u1 !== this.user.email && u2 !== this.user.email) return
+
+  const messageText = msg.text || "📎 File"
+
+  const friend = msg.sender === this.user.email
+    ? msg.room.split("||").find(x=>x!==this.user.email)
+    : msg.sender
+
+  const chat = this.chats.find(c=>c.friend_email===friend)
+
+  // 🔥 jika chat sudah ada
+  if(chat){
+
+    // anti duplicate
+    if(chat.updated_at === msg.created_at &&
+       chat.last_message === messageText) return
+
+    chat.last_message = messageText
+    chat.updated_at = msg.created_at
+
+    if(msg.sender !== this.user.email){
+      chat.unread = (chat.unread||0)+1
+      localStorage.setItem("unread_"+friend, chat.unread)
+    }
+
+  } 
+  // 🔥 jika chat BELUM ADA → auto create
+  else {
+
+    this.chats.unshift({
+      room: msg.room,
+      friend_email: friend,
+      friend_name: friend,
+      last_message: messageText,
+      updated_at: msg.created_at,
+      unread: msg.sender !== this.user.email ? 1 : 0
+    })
+
+    // 🔥 subscribe room baru
+    this.wsGlobal.send(JSON.stringify({
+      type:"subscribe",
+      room: msg.room
+    }))
+  }
+
+  // 🔥 sorting WA style
+  this.chats = [...this.chats].sort(
+    (a,b)=> new Date(b.updated_at) - new Date(a.updated_at)
+  )
+
+  return
+}
+
   // PROFILE UPDATE
   if(msg.type==="profile_update"){
     this.chats = this.chats.map(c=>{

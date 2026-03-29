@@ -177,6 +177,11 @@ this.wsGlobal.onopen = ()=>{
     type:"online",
     user:this.user.email
   }))
+  
+  this.wsGlobal.send(JSON.stringify({
+    type:"init_chats",
+    user:this.user.email
+  }))
 }
 
 this.wsGlobal.onmessage = (e)=>{
@@ -191,7 +196,7 @@ this.wsGlobal.onmessage = (e)=>{
 
   // 🔥 WAJIB: subscribe semua room
   this.chats.forEach(c=>{
-    const room = [this.user.email, c.friend_email].sort().join("_")
+    const room = [this.user.email, c.friend_email].sort().join("||")
 
     this.wsGlobal.send(JSON.stringify({
       type:"subscribe",
@@ -214,7 +219,7 @@ this.wsGlobal.onmessage = (e)=>{
     if(!msg.room) return
     const exists = this.chats.find(c=> {
       const room = [this.user.email, c.friend_email]
-      .sort().join("_")
+      .sort().join("||")
       return room === msg.room
     })
     if(!exists) return
@@ -232,67 +237,6 @@ this.wsGlobal.onmessage = (e)=>{
     return
   }
 
-  // MESSAGE
-  if(msg.type==="message"){
-
-  if(!msg.room) return
-
-  const [u1,u2] = msg.room.split("_")
-
-  // 🔥 pastikan message milik user ini
-  if(u1 !== this.user.email && u2 !== this.user.email) return
-
-  const messageText = msg.text || "📎 File"
-
-  const friend = msg.sender === this.user.email
-    ? msg.room.split("_").find(x=>x!==this.user.email)
-    : msg.sender
-
-  const chat = this.chats.find(c=>c.friend_email===friend)
-
-  // 🔥 jika chat sudah ada
-  if(chat){
-
-    // anti duplicate
-    if(chat.updated_at === msg.created_at &&
-       chat.last_message === messageText) return
-
-    chat.last_message = messageText
-    chat.updated_at = msg.created_at
-
-    if(msg.sender !== this.user.email){
-      chat.unread = (chat.unread||0)+1
-      localStorage.setItem("unread_"+friend, chat.unread)
-    }
-
-  } 
-  // 🔥 jika chat BELUM ADA → auto create
-  else {
-
-    this.chats.unshift({
-      room: msg.room,
-      friend_email: friend,
-      friend_name: friend,
-      last_message: messageText,
-      updated_at: msg.created_at,
-      unread: msg.sender !== this.user.email ? 1 : 0
-    })
-
-    // 🔥 subscribe room baru
-    this.wsGlobal.send(JSON.stringify({
-      type:"subscribe",
-      room: msg.room
-    }))
-  }
-
-  // 🔥 sorting WA style
-  this.chats = [...this.chats].sort(
-    (a,b)=> new Date(b.updated_at) - new Date(a.updated_at)
-  )
-
-  return
-}
-
   // PROFILE UPDATE
   if(msg.type==="profile_update"){
     this.chats = this.chats.map(c=>{
@@ -306,7 +250,7 @@ this.wsGlobal.onmessage = (e)=>{
 
   // DELETE CHAT
   if(msg.type==="chat_deleted"){
-    const f = msg.room.split("_").find(x=>x!==this.user.email)
+    const f = msg.room.split("||").find(x=>x!==this.user.email)
     this.chats = this.chats.filter(c=>c.friend_email!==f)
     localStorage.removeItem("unread_"+f)
     return
@@ -317,7 +261,7 @@ this.wsGlobal.onmessage = (e)=>{
     if(!msg.room) return
 
     const friend = msg.sender === this.user.email
-      ? msg.room.split("_").find(x=>x!==this.user.email)
+      ? msg.room.split("||").find(x=>x!==this.user.email)
       : msg.sender
 
     const chat = this.chats.find(c=>c.friend_email===friend)
@@ -344,7 +288,7 @@ this.wsGlobal.onmessage = (e)=>{
 
   // READ
   if(msg.type==="read_update"){
-    const f = msg.room.split("_").find(x=>x!==this.user.email)
+    const f = msg.room.split("||").find(x=>x!==this.user.email)
     const chat = this.chats.find(c=>c.friend_email===f)
     if(chat){
       chat.unread = 0
